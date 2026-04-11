@@ -2,8 +2,17 @@ import TelegramBot from 'node-telegram-bot-api';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { catalog, reloadCatalog, stockState } from './scraper.js';
+import eventBus from './eventBus.js';
 import { startDiscoveryEngine, runDiscovery } from './discovery.js';
+
+// 通过动态 import 延迟解析 scraper.js，避免循环依赖导致的 undefined
+// catalog/stockState/reloadCatalog 在 initBot() 被调用时才会被赋值
+let catalog, stockState, reloadCatalog;
+import('./scraper.js').then(m => {
+  catalog = m.catalog;
+  stockState = m.stockState;
+  reloadCatalog = m.reloadCatalog;
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -250,10 +259,16 @@ if (token) {
   // 启动后台自动发现引擎（每 4 小时自动跑一轮）
   const adminId = process.env.TG_ADMIN_ID || null;
   startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4);
+
+  // 订阅来自 scraper.js 的补货事件（通过 eventBus 解耦，避免循环依赖）
+  eventBus.on('restock', (products) => {
+    notifyStockChange(products);
+  });
 }
 
 // 接收同一商家的产品数组，合并成一条消息发送
-export function notifyStockChange(products) {
+// 内部函数，不再 export（由 eventBus 事件驱动，而非 scraper.js 直接调用）
+function notifyStockChange(products) {
   // 兼容单个产品和数组
   if (!Array.isArray(products)) products = [products];
   if (products.length === 0) return;

@@ -4,7 +4,8 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import * as cheerio from 'cheerio';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { notifyStockChange } from './tgBot.js';
+// 使用事件总线替代对 tgBot.js 的直接 import，打破循环依赖
+import eventBus from './eventBus.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -144,7 +145,8 @@ export async function runScraperCycle() {
       grouped[p.provider].push(p);
     });
     for (const [provider, products] of Object.entries(grouped)) {
-      await notifyStockChange(products);
+      // 通过事件总线通知 TG Bot，避免循环依赖
+      eventBus.emit('restock', products);
     }
   }
   

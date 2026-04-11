@@ -172,11 +172,12 @@ import('./tgBot.js').then(({ initBot }) => {
   console.error('⚠️ Telegram Bot 启动失败:', err.message);
 });
 
-// 启动库存检测轮询（每 60 秒）
+// 启动库存检测轮询（每 5 分钟）
+// 每个产品检测约 4-7 秒，74 款轮完需 5-8 分钟，使用 5 分钟间隔避免并发堆积
 runScraperCycle();
 setInterval(() => {
   runScraperCycle();
-}, 60000);
+}, 5 * 60 * 1000);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 VPS Monitor API Server running at http://localhost:${PORT}`);
