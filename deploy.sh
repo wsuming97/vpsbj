@@ -30,7 +30,7 @@ if [ -d "$INSTALL_DIR" ]; then
   git pull
 else
   echo "📥 正在克隆项目..."
-  git clone https://github.com/你的用户名/vps-tracker.git $INSTALL_DIR
+  git clone https://github.com/wsuming97/vpsbj.git $INSTALL_DIR
   cd $INSTALL_DIR
 fi
 

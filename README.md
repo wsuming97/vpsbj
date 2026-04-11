@@ -21,8 +21,8 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/你的用户名/vps-tracker.git
-cd vps-tracker
+git clone https://github.com/wsuming97/vpsbj.git
+cd vpsbj
 
 # 2. 配置环境变量（编辑 docker-compose.yml 中的 TG_BOT_TOKEN 和 TG_CHANNEL_ID）
 nano docker-compose.yml
@@ -47,8 +47,8 @@ sudo apt-get install -y nodejs
 sudo apt-get install -y chromium-browser
 
 # 3. 克隆并安装
-git clone https://github.com/你的用户名/vps-tracker.git
-cd vps-tracker
+git clone https://github.com/wsuming97/vpsbj.git
+cd vpsbj
 npm install
 
 # 4. 设置环境变量
