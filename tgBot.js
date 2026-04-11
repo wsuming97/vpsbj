@@ -26,6 +26,18 @@ export function initBot() {
     let bot = new TelegramBot(token, { polling: true });
     console.log('🤖 Telegram Bot 控制台已启动，通知将发往频道:', channelId);
 
+    // 注册命令菜单快捷键（点击输入框旁的 / 按钮即可看到）
+    bot.setMyCommands([
+      { command: 'stock',    description: '📦 查看当前有货产品' },
+      { command: 'stats',    description: '📊 各商家库存统计概览' },
+      { command: 'status',   description: '⚙️ 系统运行状态' },
+      { command: 'site',     description: '🌐 获取网页面板地址' },
+      { command: 'add',      description: '➕ 添加新品监控' },
+      { command: 'discover', description: '🔍 全网扫描挖掘新品' },
+      { command: 'list',     description: '📋 查看全部监控清单' },
+    ]).then(() => console.log('✅ Bot 命令菜单已注册'))
+      .catch(e => console.warn('⚠️ 注册命令菜单失败:', e.message));
+
     // Verify Admin Middleware
     const requireAdmin = (msg) => {
       if (msg.chat.type !== 'private') return false;
