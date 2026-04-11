@@ -1,0 +1,24 @@
+{
+  "name": "vps-aff-monitor",
+  "version": "1.0.0",
+  "description": "VPS Stock Monitor and Affiliate Platform",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "axios": "^1.15.0",
+    "cheerio": "^1.2.0",
+    "cloudscraper": "^4.6.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "got-scraping": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.67.0",
+    "puppeteer": "^24.40.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

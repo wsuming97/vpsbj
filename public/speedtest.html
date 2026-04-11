@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专属节点测速 - VPS Aff Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --buy-gradient: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* Header */
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+      z-index: 100;
+    }
+    .header-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.25rem; font-weight: 700;
+    }
+    .header-logo svg { color: var(--blue); }
+    .back-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .back-btn:hover { background: #f1f5f9; color: var(--text); }
+
+    /* Main Container */
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 0 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .st-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--card-border);
+      background: #f8fafc;
+      text-align: center;
+    }
+    .panel-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .panel-subtitle {
+      color: var(--muted);
+      font-size: 0.9375rem;
+    }
+
+    .panel-body {
+      padding: 0;
+      flex: 1;
+      min-height: 500px;
+      position: relative;
+    }
+
+    .st-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 24px;
+    }
+    @media (max-width: 600px) {
+      .st-metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    .metric-card {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .metric-unit {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .st-progress {
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      margin: 0 24px;
+      overflow: hidden;
+    }
+    .st-progress-bar {
+      height: 100%;
+      background: var(--buy-gradient);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .st-ip {
+      text-align: center;
+      padding: 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 10-4 4-4-4"/></svg>
+      <span>VPS 节点测速</span>
+    </div>
+    <a href="/" class="back-btn">← 返回库存监控</a>
+  </div>
+
+  <div class="container">
+    <div class="st-panel">
+      <div class="panel-header">
+        <h1 class="panel-title">节点速度测试</h1>
+        <p class="panel-subtitle">测试你到本服务器节点的实际网络速度</p>
+      </div>
+
+      <div class="panel-body" style="padding: 0;">
+        <!-- 开始按钮 -->
+        <div id="start-view" style="padding: 40px; text-align: center;">
+          <button class="st-start-btn" id="btn-start">⚡ 开始测速</button>
+          <p style="color: var(--muted); margin-top: 16px; font-size: 0.85rem;">
+            测试内容：下载速度 · 上传速度 · 延迟 · 抖动
+          </p>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="st-progress" id="progress-bar" style="display: none;">
+          <div class="st-progress-bar" id="progress-fill"></div>
+        </div>
+
+        <!-- 测速结果面板 -->
+        <div class="st-metrics" id="metrics" style="display: none;">
+          <div class="metric-card">
+            <div class="metric-label">下载速度</div>
+            <div class="metric-value" id="dl-speed">--</div>
+            <div class="metric-unit">Mbps</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">上传速度</div>
+            <div class="metric-value" id="ul-speed">--</div>
+            <div class="metric-unit">Mbps</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">延迟</div>
+            <div class="metric-value" id="ping-val">--</div>
+            <div class="metric-unit">ms</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">抖动</div>
+            <div class="metric-value" id="jitter-val">--</div>
+            <div class="metric-unit">ms</div>
+          </div>
+        </div>
+
+        <!-- IP 信息 -->
+        <div class="st-ip" id="ip-info" style="display: none;">
+          你的 IP: <span id="client-ip">检测中...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="speedtest_core.js"></script>
+  <script>
+    document.getElementById('btn-start').addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = '测速中...';
+      document.getElementById('metrics').style.display = 'grid';
+      document.getElementById('progress-bar').style.display = 'block';
+      document.getElementById('ip-info').style.display = 'block';
+
+      const s = new Speedtest();
+      s.setSelectedServer({
+        name: window.location.hostname,
+        server: window.location.origin + '/',
+        dlURL: 'speedtest/garbage',
+        ulURL: 'speedtest/empty',
+        pingURL: 'speedtest/empty',
+        getIpURL: 'speedtest/getIP'
+      });
+
+      s.onupdate = function(data) {
+        if (data.dlStatus) document.getElementById('dl-speed').textContent = data.dlStatus;
+        if (data.ulStatus) document.getElementById('ul-speed').textContent = data.ulStatus;
+        if (data.pingStatus) document.getElementById('ping-val').textContent = data.pingStatus;
+        if (data.jitterStatus) document.getElementById('jitter-val').textContent = data.jitterStatus;
+        if (data.clientIp) document.getElementById('client-ip').textContent = data.clientIp;
+
+        // 更新进度条
+        let progress = 0;
+        if (data.testState === 1) progress = data.dlProgress * 33;
+        else if (data.testState === 2) progress = 33 + data.pingProgress * 33;
+        else if (data.testState === 3) progress = 66 + data.ulProgress * 34;
+        else if (data.testState >= 4) progress = 100;
+        document.getElementById('progress-fill').style.width = progress + '%';
+      };
+
+      s.onend = function(aborted) {
+        document.getElementById('progress-fill').style.width = '100%';
+        const btn = document.getElementById('btn-start');
+        btn.textContent = aborted ? '已中止 — 重新测速' : '✅ 测试完成 — 再测一次';
+        btn.disabled = false;
+        document.getElementById('start-view').style.display = 'block';
+      };
+
+      document.getElementById('start-view').style.display = 'none';
+      s.start();
+    });
+  </script>
+</body>
+</html>
+

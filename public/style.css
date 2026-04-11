@@ -1,0 +1,459 @@
+:root {
+  --bg-color: #f8fafc;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --acc-blue: #2563eb;
+  --acc-blue-hover: #1d4ed8;
+  
+  --badge-in-stock: #059669;
+  --badge-in-stock-bg: #d1fae5;
+  
+  --badge-oos: #dc2626;
+  --badge-oos-bg: #fee2e2;
+  
+  --badge-err: #d97706;
+  
+  --buy-gradient: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+  --buy-gradient-hover: linear-gradient(90deg, #ea580c 0%, #c2410c 100%);
+
+  /* Tag colors mapped for light mode */
+  --tag-premium-bg: #fef08a;
+  --tag-premium-color: #b45309;
+  --tag-premium-border: #fde047;
+  
+  --tag-normal-bg: #dcfce7;
+  --tag-normal-color: #15803d;
+  --tag-normal-border: #bbf7d0;
+  
+  --tag-opt-bg: #dbeafe;
+  --tag-opt-color: #1d4ed8;
+  --tag-opt-border: #bfdbfe;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Header */
+header {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.logo svg {
+  color: var(--acc-blue);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  background-color: #f1f5f9;
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  background-color: var(--acc-blue);
+  border-color: var(--acc-blue);
+  color: #fff;
+}
+
+.tab-btn.special-offer-tab {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  font-weight: 600;
+}
+
+.tab-btn.special-offer-tab:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.tab-btn.special-offer-tab.active {
+  background-color: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.btn-tg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #2481cc; /* Telegram brand color */
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.btn-tg:hover {
+  opacity: 0.9;
+}
+
+/* Status Bar */
+.status-bar {
+  background-color: #ffffff;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.status-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.uptime-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blinking-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--badge-in-stock);
+  border-radius: 50%;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.btn-refresh {
+  background: none;
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-left: 12px;
+  cursor: pointer;
+}
+
+.btn-refresh:hover {
+  background-color: #f1f5f9;
+  color: var(--text-main);
+}
+
+/* Main Content */
+main {
+  flex: 1;
+  padding: 32px 0;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.loading-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 64px;
+  color: var(--text-muted);
+}
+
+/* Product Card */
+.product-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.provider-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Status variants */
+.status-badge.in-stock {
+  color: var(--badge-in-stock);
+  background-color: var(--badge-in-stock-bg);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.in-stock::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background-color: var(--badge-in-stock);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--badge-in-stock);
+}
+
+.status-badge.oos {
+  color: var(--badge-oos);
+  background-color: var(--badge-oos-bg);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Card Body */
+.card-title {
+  margin-bottom: 12px;
+}
+
+.product-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.product-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Routing Tags */
+.routing-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pill-tag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  display: inline-block;
+  line-height: 1.2;
+}
+
+.tag-premium {
+  background: var(--tag-premium-bg);
+  color: var(--tag-premium-color);
+  border-color: var(--tag-premium-border);
+}
+.tag-normal {
+  background: var(--tag-normal-bg);
+  color: var(--tag-normal-color);
+  border-color: var(--tag-normal-border);
+}
+.tag-optimized {
+  background: var(--tag-opt-bg);
+  color: var(--tag-opt-color);
+  border-color: var(--tag-opt-border);
+}
+
+/* Card Specs */
+.card-specs {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  flex: 1;
+}
+
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.spec-row:last-child {
+  margin-bottom: 0;
+}
+
+.spec-label {
+  color: var(--text-muted);
+}
+
+.spec-value {
+  font-weight: 500;
+  text-align: right;
+}
+
+/* Actions */
+.card-actions {
+  margin-bottom: 12px;
+}
+
+.btn-buy {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--text-muted) !important;
+  background: var(--card-border);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-buy.active {
+  color: #fff !important;
+  background: var(--buy-gradient);
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+}
+
+.btn-buy.active:hover {
+  background: var(--buy-gradient-hover);
+  transform: translateY(-1px);
+}
+
+.card-links {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--card-border);
+  padding-top: 12px;
+}
+
+.tool-link {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.tool-link:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--card-border);
+  padding: 32px 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.footer-content p {
+  margin-bottom: 8px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .status-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .btn-refresh {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+}
+
+/* Checking badge - amber/orange pulse */
+.status-badge.checking {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: pulse-check 1.5s ease-in-out infinite;
+}
+@keyframes pulse-check {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

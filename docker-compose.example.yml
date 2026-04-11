@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  vps-tracker:
+    build: .
+    container_name: vps-tracker
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - TG_BOT_TOKEN=YOUR_BOT_TOKEN_HERE
+      - TG_CHANNEL_ID=YOUR_CHANNEL_ID_HERE
+      - TG_ADMIN_ID=YOUR_ADMIN_ID_HERE
+    volumes:
+      - ./catalog.json:/app/catalog.json
+      - ./public:/app/public
