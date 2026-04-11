@@ -43,32 +43,126 @@ export function initBot() {
       if (!requireAdmin(msg)) return;
       bot.sendMessage(msg.chat.id,
         '🚀 **VPS 监控遥控器已就绪**\n\n' +
-        '可用指令：\n' +
-        '👉 /list - 查看所有监控产品\n' +
-        '👉 /off <id> - 将指定产品下架(隐藏)\n' +
-        '👉 /on <id> - 将指定产品上架(恢复监控)\n' +
+        '📌 常用指令：\n' +
+        '👉 /stock - 查看当前有货产品\n' +
+        '👉 /stats - 各商家库存统计概览\n' +
         '👉 /add <链接> [名称] - 快捷添加新品监控\n' +
-        '👉 /discover - 立即全网扫描挖掘潜在新品\n' +
-        '👉 /status - 查看系统运行状态\n\n' +
+        '👉 /discover - 立即全网扫描挖掘新品\n' +
+        '👉 /status - 系统运行状态\n' +
+        '👉 /site - 获取网页面板地址\n\n' +
+        '🔧 管理指令：\n' +
+        '👉 /list - 查看全部监控清单（含缺货）\n' +
+        '👉 /off <id> - 暂停监控某产品\n' +
+        '👉 /on <id> - 恢复监控某产品\n\n' +
         '💡 示例：\n' +
         '`/add https://www.dmit.io/cart.php?a=add&pid=999 DMIT新品`',
         { parse_mode: 'Markdown' }
       );
     });
 
-    // /list command — 分页发送，避免超过 Telegram 4096 字符限制
+    // /stock command — 只显示当前有货的产品
+    bot.onText(/^\/stock$/, async (msg) => {
+      if (!requireAdmin(msg)) return;
+
+      const inStockItems = Object.values(stockState).filter(p => !p.isHidden && p.inStock === true);
+
+      if (inStockItems.length === 0) {
+        return bot.sendMessage(msg.chat.id, '📭 当前没有任何产品有货。\n爬虫正在持续监控中，补货时会自动通知你。');
+      }
+
+      const chunks = [];
+      let current = `✅ **当前有货产品（${inStockItems.length} 款）：**\n\n`;
+
+      inStockItems.forEach(p => {
+        const sp = p.specs || {};
+        const specLine = [sp.cpu, sp.ram, sp.disk].filter(Boolean).join(' / ');
+        const buyUrl = p.affUrl || p.checkUrl;
+        const entry = `📦 *${p.providerName}* — ${p.name}\n` +
+          `${specLine ? '   配置：' + specLine + '\n' : ''}` +
+          `   💰 ${p.price || '价格待确认'}\n` +
+          `   🛒 [点击购买](${buyUrl})\n\n`;
+
+        if (current.length + entry.length > 3900) {
+          chunks.push(current);
+          current = '';
+        }
+        current += entry;
+      });
+      if (current) chunks.push(current);
+
+      for (let i = 0; i < chunks.length; i++) {
+        const pageLabel = chunks.length > 1 ? `\n— 第 ${i + 1}/${chunks.length} 页 —` : '';
+        await bot.sendMessage(msg.chat.id, chunks[i] + pageLabel, { parse_mode: 'Markdown', disable_web_page_preview: true });
+      }
+    });
+
+    // /stats command — 各商家库存统计概览
+    bot.onText(/^\/stats$/, (msg) => {
+      if (!requireAdmin(msg)) return;
+
+      // 按商家分组统计
+      const providerStats = {};
+      catalog.forEach(p => {
+        if (p.isHidden) return;
+        const key = p.providerName || p.provider;
+        if (!providerStats[key]) providerStats[key] = { total: 0, inStock: 0, outOfStock: 0, checking: 0 };
+        providerStats[key].total++;
+
+        const state = stockState[p.id];
+        if (!state || state.inStock === null) {
+          providerStats[key].checking++;
+        } else if (state.inStock) {
+          providerStats[key].inStock++;
+        } else {
+          providerStats[key].outOfStock++;
+        }
+      });
+
+      const totalInStock = Object.values(providerStats).reduce((s, v) => s + v.inStock, 0);
+      const totalAll = catalog.filter(p => !p.isHidden).length;
+
+      let text = `📊 **库存统计概览**\n\n`;
+      text += `全局：${totalInStock} 款有货 / ${totalAll} 款监控中\n\n`;
+
+      for (const [name, s] of Object.entries(providerStats)) {
+        const bar = s.inStock > 0 ? '🟢' : '🔴';
+        text += `${bar} **${name}**：${s.inStock}/${s.total} 有货`;
+        if (s.checking > 0) text += ` (${s.checking} 检测中)`;
+        text += '\n';
+      }
+
+      bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+    });
+
+    // /site command — 获取网页面板地址
+    bot.onText(/^\/site$/, (msg) => {
+      if (!requireAdmin(msg)) return;
+      const port = process.env.PORT || 4000;
+      bot.sendMessage(msg.chat.id,
+        `🌐 **网页面板地址**\n\n` +
+        `前台展示页：http://185.45.192.190:${port}\n` +
+        `后台管理页：http://185.45.192.190:${port}/admin.html\n\n` +
+        `💡 前台只显示有货产品，库存由爬虫自动更新。`,
+        { parse_mode: 'Markdown' }
+      );
+    });
+
+    // /list command — 完整监控清单（含缺货），分页发送
     bot.onText(/^\/list$/, async (msg) => {
       if (!requireAdmin(msg)) return;
 
-      const header = '📋 **当前监控清单：**\n\n';
       const chunks = [];
-      let current = header;
+      let current = `📋 **全部监控清单（${catalog.length} 款）：**\n\n`;
 
       catalog.forEach(p => {
-        const statusIcon = p.isHidden ? '❌ 下架' : '✅ 监控中';
-        const entry = `ID: \`${p.id}\`\n名称: ${p.name}\n状态: ${statusIcon}\n\n`;
+        const state = stockState[p.id];
+        let icon = '⏳';
+        if (p.isHidden) icon = '⏸️';
+        else if (state && state.inStock === true) icon = '✅';
+        else if (state && state.inStock === false) icon = '❌';
 
-        // Telegram 单条消息限制 4096 字符，留 100 余量
+        const entry = `${icon} \`${p.id}\` ${p.name}\n`;
+
         if (current.length + entry.length > 3900) {
           chunks.push(current);
           current = '';
@@ -119,18 +213,23 @@ export function initBot() {
       bot.sendMessage(msg.chat.id, `✅ 成功上架产品！\n*${catalog[productIndex].name}* 已恢复在网页前端的显示，爬虫正在努力监测中。`, { parse_mode: 'Markdown' });
     });
 
-    // /status command
+    // /status command — 增强版系统状态
     bot.onText(/^\/status$/, (msg) => {
       if (!requireAdmin(msg)) return;
 
-      const count = catalog.filter(p => !p.isHidden).length;
-      const cacheSize = Object.keys(stockState).length;
+      const activeCount = catalog.filter(p => !p.isHidden).length;
+      const inStockCount = Object.values(stockState).filter(p => !p.isHidden && p.inStock === true).length;
+      const errorCount = Object.values(stockState).filter(p => !p.isHidden && p.statusMessage && p.statusMessage.startsWith('Error')).length;
 
       bot.sendMessage(msg.chat.id,
-        `📊 **系统状态图**\n\n` +
-        `运行时间： ${(process.uptime() / 60 / 60).toFixed(2)} 小时\n` +
-        `监控任务数： ${count}/${catalog.length}\n` +
-        `抓取引擎状态： 正常运行中 ✅`,
+        `📊 **系统状态**\n\n` +
+        `⏱ 运行时间：${(process.uptime() / 60 / 60).toFixed(2)} 小时\n` +
+        `📦 监控产品：${activeCount}/${catalog.length}\n` +
+        `✅ 当前有货：${inStockCount} 款\n` +
+        `❌ 当前缺货：${activeCount - inStockCount - errorCount} 款\n` +
+        (errorCount > 0 ? `⚠️ 探测异常：${errorCount} 款\n` : '') +
+        `🔄 抓取引擎：正常运行中 ✅\n` +
+        `🔁 轮询间隔：每 5 分钟`,
         { parse_mode: 'Markdown' }
       );
     });
