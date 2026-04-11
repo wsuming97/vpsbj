@@ -18,8 +18,14 @@ app.use(express.json());
 
 // Public API endpoints
 app.get('/api/vps/stock', (req, res) => {
-  // Convert state object to array and filter out hidden items
-  const stockList = Object.values(stockState).filter(p => !p.isHidden);
+  // 网页前端只显示有货的产品（非隐藏 + inStock === true）
+  // 支持 ?all=1 查询参数返回全部（供调试用）
+  const showAll = req.query.all === '1';
+  const stockList = Object.values(stockState).filter(p => {
+    if (p.isHidden) return false;
+    if (showAll) return true;
+    return p.inStock === true;
+  });
   res.json({
     success: true,
     data: stockList,
@@ -28,10 +34,12 @@ app.get('/api/vps/stock', (req, res) => {
 });
 
 app.get('/api/vps/providers', (req, res) => {
-  // Extract unique providers
+  // 只返回有在售（有货）商品的商家
   const providers = {};
   Object.values(stockState).forEach(p => {
-    providers[p.provider] = p.providerName;
+    if (!p.isHidden && p.inStock === true) {
+      providers[p.provider] = p.providerName;
+    }
   });
   res.json({
     success: true,
