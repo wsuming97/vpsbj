@@ -137,7 +137,20 @@ async function getDiscoverBrowser() {
   if (!discoverBrowser || !discoverBrowser.isConnected()) {
     discoverBrowser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--ignore-certificate-errors'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--ignore-certificate-errors',
+        // ── 磁盘控制：防止 Chromium 缓存无限增长 ──
+        '--disable-dev-shm-usage',
+        '--disk-cache-size=0',
+        '--media-cache-size=0',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--aggressive-cache-discard',
+      ],
     });
   }
   return discoverBrowser;

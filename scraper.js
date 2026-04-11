@@ -61,7 +61,21 @@ async function getBrowser() {
   if (!browserInstance) {
     browserInstance = await puppeteer.launch({
       headless: "new",
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--ignore-certificate-errors', '--disable-blink-features=AutomationControlled']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--ignore-certificate-errors',
+        '--disable-blink-features=AutomationControlled',
+        // ── 磁盘控制：防止 Chromium 缓存无限增长 ──
+        '--disable-dev-shm-usage',      // 不使用 /dev/shm，改用 /tmp
+        '--disk-cache-size=0',           // 禁用磁盘缓存
+        '--media-cache-size=0',          // 禁用媒体缓存
+        '--disable-gpu',                 // 禁用 GPU（无头模式不需要）
+        '--disable-software-rasterizer', // 禁用软件光栅化
+        '--disable-extensions',          // 禁用扩展
+        '--disable-background-networking',// 禁用后台网络请求
+        '--aggressive-cache-discard',    // 积极丢弃缓存
+      ]
     });
   }
   return browserInstance;
