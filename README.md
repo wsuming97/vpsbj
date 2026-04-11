@@ -73,7 +73,7 @@ pm2 save
 ├── scraper.js         # 库存检测爬虫引擎（每 60 秒）
 ├── discovery.js       # 自动新品发现引擎（每 4 小时）
 ├── tgBot.js           # Telegram Bot（通知 + 管理指令）
-├── catalog.json       # 产品数据库（74 款产品）
+├── catalog.json       # 产品数据库
 ├── Dockerfile         # Docker 构建文件
 ├── docker-compose.yml # Docker Compose 配置
 └── public/            # 前端静态文件
@@ -104,15 +104,6 @@ pm2 save
 | `/add <url> [名称]` | 添加新产品监控 |
 | `/discover` | 手动触发新品发现扫描 |
 | `/status` | 查看系统运行状态 |
-
-## 当前监控商家
-
-- 🧱 搬瓦工 (BandwagonHost) — 14 款
-- 📡 DMIT — 11 款
-- 🔥 RackNerd — 21 款
-- ☁️ ZGO Cloud — 17 款
-- 🥥 ColoCrossing — 7 款
-- 🌤️ CloudCone — 4 款
 
 ## License
 
