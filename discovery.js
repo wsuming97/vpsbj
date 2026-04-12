@@ -278,21 +278,83 @@ async function scrapeProductDetails(browser, url) {
         }
       }
 
-      // ── 提取价格（优先年付） ──
-      const annualMatch = allText.match(/Annually[\s\S]*?\$(\d+[.,]\d{2})/i);
-      if (annualMatch) {
-        result.price = `$${annualMatch[1]}/年`;
-      }
-      if (!result.price) {
-        const monthlyMatch = allText.match(/Monthly[\s\S]*?\$(\d+[.,]\d{2})/i);
-        if (monthlyMatch) {
-          result.price = `$${monthlyMatch[1]}/月`;
+      // ── 提取价格（精确解析 WHMCS 计费周期） ──
+      // 策略：优先读 WHMCS 的 <select> 下拉框 DOM，正则兜底
+
+      // ---- 第一优先级：WHMCS 下拉框精确提取 ----
+      const billingSelect = document.querySelector('select[name="billingcycle"]');
+      if (billingSelect) {
+        const selectedOption = billingSelect.options[billingSelect.selectedIndex];
+        const selectedText = selectedOption ? selectedOption.textContent.trim() : '';
+        const cycleMap = {
+          'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
+          'annually': '年', 'biennially': '两年', 'triennially': '三年',
+        };
+        // 先取被选中的那个周期
+        const optionPrice = selectedText.match(/\$(\d+[.,]\d{2})/);
+        if (optionPrice) {
+          let period = '';
+          for (const [key, val] of Object.entries(cycleMap)) {
+            if (selectedText.toLowerCase().includes(key)) { period = val; break; }
+          }
+          result.price = '$' + optionPrice[1] + '/' + (period || '未知周期');
+        }
+        // 如果选中项没价格，遍历全部 option
+        if (!result.price) {
+          for (const opt of billingSelect.options) {
+            const t = opt.textContent.trim();
+            const pm = t.match(/\$(\d+[.,]\d{2})/);
+            if (pm) {
+              let period = '';
+              for (const [key, val] of Object.entries(cycleMap)) {
+                if (t.toLowerCase().includes(key)) { period = val; break; }
+              }
+              result.price = '$' + pm[1] + '/' + (period || '未知周期');
+              break;
+            }
+          }
         }
       }
+
+      // ---- 第二优先级：结算摘要 DOM 区域内匹配 ----
+      if (!result.price) {
+        const summaryEl = document.querySelector('.order-summary, .product-pricing, #order-standard_cart, .total-due-today, .amt');
+        const summaryText = summaryEl ? summaryEl.innerText : '';
+        if (summaryText) {
+          const patterns = [
+            { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
+            { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+            { re: /annually[:\s]*\$(\d+[.,]\d{2})/i, p: '年' },
+            { re: /monthly[:\s]*\$(\d+[.,]\d{2})/i, p: '月' },
+            { re: /quarterly[:\s]*\$(\d+[.,]\d{2})/i, p: '季' },
+          ];
+          for (const { re, p } of patterns) {
+            const m = summaryText.match(re);
+            if (m) { result.price = '$' + m[1] + '/' + p; break; }
+          }
+        }
+      }
+
+      // ---- 第三优先级：全文正则，但限制匹配距离（最多 50 字符） ----
+      if (!result.price) {
+        const strictPatterns = [
+          { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
+          { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+          { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
+          { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
+          { re: /Quarterly.{0,50}\$(\d+[.,]\d{2})/i, p: '季' },
+        ];
+        for (const { re, p } of strictPatterns) {
+          const m = allText.match(re);
+          if (m) { result.price = '$' + m[1] + '/' + p; break; }
+        }
+      }
+
+      // ---- 最后兜底：裸 $XX.XX（不带周期） ----
       if (!result.price) {
         const priceMatch = allText.match(/\$(\d+[.,]\d{2})\s*(?:USD|美元)?/i);
         if (priceMatch) {
-          result.price = `$${priceMatch[1]}`;
+          result.price = '$' + priceMatch[1];
         }
       }
 

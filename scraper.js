@@ -153,15 +153,37 @@ export async function runScraperCycle() {
             await sleep(3000);
             const priceInfo = await pricePage.evaluate(() => {
               const text = document.body.innerText;
-              // 优先年付
-              let m = text.match(/Annually[\s\S]*?\$(\d+[.,]\d{2})/i);
-              if (m) return `$${m[1]}/年`;
-              m = text.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
-              if (m) return `$${m[1]}/年`;
-              m = text.match(/Monthly[\s\S]*?\$(\d+[.,]\d{2})/i);
-              if (m) return `$${m[1]}/月`;
-              m = text.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i);
-              if (m) return `$${m[1]}/月`;
+
+              // ---- 优先级 1：WHMCS 下拉框精确提取 ----
+              const billingSelect = document.querySelector('select[name="billingcycle"]');
+              if (billingSelect) {
+                const selectedOption = billingSelect.options[billingSelect.selectedIndex];
+                const selectedText = selectedOption ? selectedOption.textContent.trim() : '';
+                const cycleMap = {
+                  'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
+                  'annually': '年', 'biennially': '两年', 'triennially': '三年',
+                };
+                const pm = selectedText.match(/\$(\d+[.,]\d{2})/);
+                if (pm) {
+                  let period = '';
+                  for (const [key, val] of Object.entries(cycleMap)) {
+                    if (selectedText.toLowerCase().includes(key)) { period = val; break; }
+                  }
+                  return '$' + pm[1] + '/' + (period || '未知周期');
+                }
+              }
+
+              // ---- 优先级 2：限定距离正则 ----
+              const strictPatterns = [
+                { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
+                { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+                { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
+                { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
+              ];
+              for (const { re, p } of strictPatterns) {
+                const m = text.match(re);
+                if (m) return '$' + m[1] + '/' + p;
+              }
               return null;
             });
             if (priceInfo) livePrice = priceInfo;
