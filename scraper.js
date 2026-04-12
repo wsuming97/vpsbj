@@ -139,7 +139,8 @@ export async function runScraperCycle() {
       stockState[product.id].lastChecked = new Date().toISOString();
       stockState[product.id].statusMessage = result.inStock ? 'In Stock' : 'Out of Stock';
 
-      if (previouslyInStock !== true && result.inStock) {
+      // 只有从「确认缺货」变成「有货」才算补货，首次检测（null→true）不算
+      if (previouslyInStock === false && result.inStock === true) {
         console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
         restockedProducts.push({ ...stockState[product.id], inStock: true });
       }
