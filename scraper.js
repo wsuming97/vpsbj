@@ -173,10 +173,35 @@ export async function runScraperCycle() {
                 }
               }
 
-              // ---- 优先级 2：限定距离正则 ----
+              // ---- 优先级 1.5：DMIT 按钮式计费周期 ----
+              const cycleMapBtn = {
+                'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
+                'annually': '年', 'biennially': '两年', 'triennially': '三年',
+              };
+              const activeBtn = document.querySelector('.billing-cycle .active, [class*="billing"] .active, [class*="cycle"] .active, button.active[data-cycle], .btn-group .active');
+              if (activeBtn) {
+                const btnText = activeBtn.textContent.trim().toLowerCase();
+                let detectedPeriod = '';
+                for (const [key, val] of Object.entries(cycleMapBtn)) {
+                  if (btnText.includes(key)) { detectedPeriod = val; break; }
+                }
+                if (detectedPeriod) {
+                  const summaryArea = document.querySelector('.order-summary, [class*="summary"], [class*="order"]') || document.body;
+                  const pm = summaryArea.innerText.match(/\$\s*(\d+[.,]\d{2})/);
+                  if (pm) return '$' + pm[1] + '/' + detectedPeriod;
+                }
+              }
+
+              // ---- 优先级 2：限定距离正则 + 双向匹配 ----
               const strictPatterns = [
                 { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
                 { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+                // 反向：价格在前（DMIT 格式）
+                { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Monthly/i, p: '月' },
+                { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Annually/i, p: '年' },
+                { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Quarterly/i, p: '季' },
+                { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Semi-?Annually/i, p: '半年' },
+                // 正向：周期词在前
                 { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
                 { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
               ];

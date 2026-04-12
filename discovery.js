@@ -316,17 +316,52 @@ async function scrapeProductDetails(browser, url) {
         }
       }
 
+      // ---- 第 1.5 优先级：DMIT 等自定义按钮式计费周期选择器 ----
+      // DMIT 不用 <select>，用的是一组按钮（active 状态标识选中周期）
+      // 同时右侧 Order Summary 面板显示 "$89.90 USD / Monthly"
+      if (!result.price) {
+        const cycleMap = {
+          'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
+          'annually': '年', 'biennially': '两年', 'triennially': '三年',
+        };
+
+        // 方式 A：找 active/selected 的计费周期按钮
+        const activeBtn = document.querySelector('.billing-cycle .active, .billing-cycle .selected, [class*="billing"] .active, [class*="cycle"] .active, button.active[data-cycle], .btn-group .active');
+        if (activeBtn) {
+          const btnText = activeBtn.textContent.trim().toLowerCase();
+          let detectedPeriod = '';
+          for (const [key, val] of Object.entries(cycleMap)) {
+            if (btnText.includes(key)) { detectedPeriod = val; break; }
+          }
+          if (detectedPeriod) {
+            // 周期确定了，从 Order Summary 或页面正文中提取价格金额
+            const summaryArea = document.querySelector('.order-summary, [class*="summary"], [class*="order"], .price-display, .total') || document.body;
+            const summaryTxt = summaryArea.innerText;
+            const pm = summaryTxt.match(/\$\s*(\d+[.,]\d{2})/);
+            if (pm) {
+              result.price = '$' + pm[1] + '/' + detectedPeriod;
+            }
+          }
+        }
+      }
+
       // ---- 第二优先级：结算摘要 DOM 区域内匹配 ----
       if (!result.price) {
         const summaryEl = document.querySelector('.order-summary, .product-pricing, #order-standard_cart, .total-due-today, .amt');
         const summaryText = summaryEl ? summaryEl.innerText : '';
         if (summaryText) {
           const patterns = [
-            { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
-            { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+            // 正向：周期词在前（WHMCS 格式）
             { re: /annually[:\s]*\$(\d+[.,]\d{2})/i, p: '年' },
             { re: /monthly[:\s]*\$(\d+[.,]\d{2})/i, p: '月' },
             { re: /quarterly[:\s]*\$(\d+[.,]\d{2})/i, p: '季' },
+            // 反向：价格在前，周期词在后（DMIT Order Summary 格式: "$89.90 USD / Monthly"）
+            { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Monthly/i, p: '月' },
+            { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Annually/i, p: '年' },
+            { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Quarterly/i, p: '季' },
+            { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Semi-?Annually/i, p: '半年' },
+            { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
+            { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
           ];
           for (const { re, p } of patterns) {
             const m = summaryText.match(re);
@@ -335,11 +370,18 @@ async function scrapeProductDetails(browser, url) {
         }
       }
 
-      // ---- 第三优先级：全文正则，但限制匹配距离（最多 50 字符） ----
+      // ---- 第三优先级：全文正则，限制匹配距离 + 双向匹配 ----
       if (!result.price) {
         const strictPatterns = [
+          // 紧邻格式
           { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
           { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
+          // 反向：价格在前（DMIT 格式）
+          { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Monthly/i, p: '月' },
+          { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Annually/i, p: '年' },
+          { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Quarterly/i, p: '季' },
+          { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Semi-?Annually/i, p: '半年' },
+          // 正向：周期词在前（限 50 字符距离）
           { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
           { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
           { re: /Quarterly.{0,50}\$(\d+[.,]\d{2})/i, p: '季' },
