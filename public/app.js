@@ -95,6 +95,20 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         speedtest.style.display = 'none';
       }
+
+      // 显示优惠码提示（如果有）
+      if (product.promoCode) {
+        const promoEl = document.createElement('div');
+        promoEl.className = 'promo-code-tip';
+        promoEl.innerHTML = `🎫 优惠码：<code class="promo-code" title="点击复制">${product.promoCode}</code>`;
+        promoEl.querySelector('.promo-code').addEventListener('click', (e) => {
+          navigator.clipboard.writeText(product.promoCode).then(() => {
+            e.target.textContent = '已复制 ✓';
+            setTimeout(() => { e.target.textContent = product.promoCode; }, 1500);
+          });
+        });
+        buyBtn.parentNode.insertBefore(promoEl, buyBtn.nextSibling);
+      }
       
       grid.appendChild(clone);
     });

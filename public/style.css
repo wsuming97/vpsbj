@@ -457,3 +457,33 @@ footer {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* 优惠码提示 */
+.promo-code-tip {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #fef3c7, #fef9c3);
+  border: 1px dashed #f59e0b;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: #92400e;
+  text-align: center;
+}
+
+.promo-code {
+  display: inline-block;
+  background: #fff;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #b45309;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 1px solid #fbbf24;
+  transition: all 0.2s;
+}
+
+.promo-code:hover {
+  background: #fef08a;
+  transform: scale(1.05);
+}

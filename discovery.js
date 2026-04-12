@@ -164,54 +164,84 @@ async function closeDiscoverBrowser() {
 }
 
 // ============================================================
-// 从产品页面抓取真实名称和价格
+// 从产品页面抓取真实名称、价格和优惠码
 // ============================================================
 async function scrapeProductDetails(browser, url) {
-  const details = { name: null, price: null, specs: {} };
+  const details = { name: null, price: null, promoCode: null, specs: {} };
   const page = await browser.newPage();
   try {
+    // 先检查 URL 参数中是否已有优惠码
+    try {
+      const parsed = new URL(url);
+      const urlPromo = parsed.searchParams.get('promocode') || parsed.searchParams.get('promo');
+      if (urlPromo) details.promoCode = urlPromo;
+    } catch {}
+
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(4000);
 
-    // 从页面中提取产品名称和价格
+    // 从页面中提取产品名称、价格和优惠码
     const info = await page.evaluate(() => {
-      const result = { name: null, price: null };
+      const result = { name: null, price: null, promoCode: null, hasPromoField: false };
 
       // ── 提取产品名称 ──
-      // WHMCS 常见结构：h1、.product-name、#product-name、页面 title
       const nameEl = document.querySelector('h1') ||
                      document.querySelector('.product-name') ||
                      document.querySelector('.product-title') ||
                      document.querySelector('#product-name');
       if (nameEl) {
         let n = nameEl.textContent.trim();
-        // 清理无用前缀如 "Configure" "Order"
         n = n.replace(/^(Configure|Order|配置)\s*/i, '').trim();
         if (n && n.length > 1 && n.length < 150) result.name = n;
       }
-      // 降级：从 title 提取
       if (!result.name && document.title) {
         const t = document.title.replace(/- .*$/, '').replace(/\|.*$/, '').trim();
         if (t && t.length > 2 && t.length < 100) result.name = t;
       }
 
-      // ── 提取价格（优先年付） ──
-      // 查找所有包含价格的文字
+      // ── 检测优惠码输入框 ──
+      // WHMCS 的优惠码输入框通常 name="promocode" 或 id="inputPromotionCode"
+      const promoInput = document.querySelector('input[name="promocode"]') ||
+                         document.querySelector('#inputPromotionCode') ||
+                         document.querySelector('input[name="promo"]') ||
+                         document.querySelector('input[placeholder*="romo"]');
+      if (promoInput) {
+        result.hasPromoField = true;
+        // 如果输入框已有值（URL 带入或页面预填），直接取
+        if (promoInput.value && promoInput.value.trim()) {
+          result.promoCode = promoInput.value.trim();
+        }
+      }
+
+      // ── 从页面文本中识别优惠码 ──
       const allText = document.body.innerText;
 
-      // 方法1：查找 Annually 行
+      // 常见优惠码模式：Coupon: XXXXX / Promo Code: XXXXX / 优惠码：XXXXX
+      if (!result.promoCode) {
+        const promoPatterns = [
+          /(?:coupon|promo\s*code|promocode|discount\s*code|优惠码|折扣码)[:\s：]+([A-Z0-9_-]{3,30})/i,
+          /(?:use|apply|enter)\s+(?:code\s+)?[\"\']?([A-Z0-9_-]{4,30})[\"\']?/i,
+        ];
+        for (const pat of promoPatterns) {
+          const m = allText.match(pat);
+          if (m) {
+            result.promoCode = m[1];
+            break;
+          }
+        }
+      }
+
+      // ── 提取价格（优先年付） ──
       const annualMatch = allText.match(/Annually[\s\S]*?\$(\d+[.,]\d{2})/i);
       if (annualMatch) {
         result.price = `$${annualMatch[1]}/年`;
       }
-      // 方法2：查找 Monthly 行
       if (!result.price) {
         const monthlyMatch = allText.match(/Monthly[\s\S]*?\$(\d+[.,]\d{2})/i);
         if (monthlyMatch) {
           result.price = `$${monthlyMatch[1]}/月`;
         }
       }
-      // 方法3：直接找第一个价格
       if (!result.price) {
         const priceMatch = allText.match(/\$(\d+[.,]\d{2})\s*(?:USD|美元)?/i);
         if (priceMatch) {
@@ -224,6 +254,12 @@ async function scrapeProductDetails(browser, url) {
 
     details.name = info.name;
     details.price = info.price;
+    // URL 参数中的优惠码优先级高于页面检测
+    if (!details.promoCode && info.promoCode) details.promoCode = info.promoCode;
+
+    if (details.promoCode) {
+      console.log(`[Discoverer]     🎫 检测到优惠码: ${details.promoCode}`);
+    }
 
   } catch (err) {
     console.log(`[Discoverer]     ⚠️ 抓取产品详情失败: ${err.message}`);
@@ -447,12 +483,13 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           providerName: source.providerName,
           name: realName,
           price: realPrice,
+          promoCode: details.promoCode || null,
           specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
           datacenters: ['待确认'],
           networkRoutes: ['待确认'],
           outOfStockKeywords: source.outOfStockKeywords || ['Out of Stock', 'out of stock'],
           checkUrl: productUrl,
-          affUrl: `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}`,
+          affUrl: `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}${details.promoCode ? '&promocode=' + details.promoCode : ''}`,
           isSpecialOffer: true
         };
         catalogRef.push(newEntry);
@@ -495,12 +532,15 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         providerName: cp.providerName,
         name: realName,
         price: realPrice,
+        promoCode: details.promoCode || null,
         specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
         datacenters: ['待确认'],
         networkRoutes: ['待确认'],
         outOfStockKeywords: ['Out of Stock', 'out of stock'],
         checkUrl: productUrl,
-        affUrl: affParam ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}` : productUrl,
+        affUrl: affParam
+          ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}${details.promoCode ? '&promocode=' + details.promoCode : ''}`
+          : productUrl,
         isSpecialOffer: true
       };
       catalogRef.push(newEntry);
