@@ -142,7 +142,57 @@ export async function runScraperCycle() {
       // 只有从「确认缺货」变成「有货」才算补货，首次检测（null→true）不算
       if (previouslyInStock === false && result.inStock === true) {
         console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
-        restockedProducts.push({ ...stockState[product.id], inStock: true });
+
+        // ── 补货瞬间：实时抓取最新价格（硬件涨价可能导致价格变动） ──
+        let livePrice = null;
+        let oldPrice = product.price;
+        try {
+          const pricePage = await browser.newPage();
+          try {
+            await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            await sleep(3000);
+            const priceInfo = await pricePage.evaluate(() => {
+              const text = document.body.innerText;
+              // 优先年付
+              let m = text.match(/Annually[\s\S]*?\$(\d+[.,]\d{2})/i);
+              if (m) return `$${m[1]}/年`;
+              m = text.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
+              if (m) return `$${m[1]}/年`;
+              m = text.match(/Monthly[\s\S]*?\$(\d+[.,]\d{2})/i);
+              if (m) return `$${m[1]}/月`;
+              m = text.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i);
+              if (m) return `$${m[1]}/月`;
+              return null;
+            });
+            if (priceInfo) livePrice = priceInfo;
+          } finally {
+            await pricePage.close();
+          }
+        } catch (e) {
+          console.log(`[Scraper] 价格实时抓取失败: ${e.message}，使用缓存价格`);
+        }
+
+        // 如果抓到了新价格且和旧价格不同，更新 catalog
+        let priceChanged = false;
+        if (livePrice && livePrice !== oldPrice) {
+          priceChanged = true;
+          console.log(`💰 [PRICE UPDATE] ${product.name}: ${oldPrice} → ${livePrice}`);
+          // 更新 catalog 文件中的价格
+          const idx = catalog.findIndex(c => c.id === product.id);
+          if (idx !== -1) {
+            catalog[idx].price = livePrice;
+            fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2));
+          }
+          stockState[product.id].price = livePrice;
+        }
+
+        restockedProducts.push({
+          ...stockState[product.id],
+          inStock: true,
+          priceChanged,
+          oldPrice: priceChanged ? oldPrice : null,
+          livePrice: livePrice || oldPrice
+        });
       }
     } else {
       stockState[product.id].lastChecked = new Date().toISOString();

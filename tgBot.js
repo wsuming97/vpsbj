@@ -403,7 +403,19 @@ function notifyStockChange(products, token, channelId, bot) {
     message += `📦 <b>${providerName} - [${product.name}]</b>\n`;
     message += `${specLine}${portInfo}\n`;
     message += `├ 线路：${routes} · ${dcs}\n`;
-    message += `💰 <b>${product.price}</b>\n`;
+
+    // 价格变动提示
+    if (product.priceChanged && product.oldPrice) {
+      message += `💰 <b>${product.livePrice}</b>`;
+      message += ` ⚠️ <s>${product.oldPrice}</s> → 价格已更新\n`;
+    } else {
+      message += `💰 <b>${product.price}</b>\n`;
+    }
+
+    if (product.promoCode) {
+      message += `🎫 优惠码：<code>${product.promoCode}</code>\n`;
+    }
+
     message += `🛒 <a href="${buyUrl}">点击直达购买</a>\n`;
 
     if (i < products.length - 1) message += `\n`; 
