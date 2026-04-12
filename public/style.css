@@ -228,6 +228,34 @@ main {
   color: var(--text-muted);
 }
 
+/* Provider Group Header in Special Tab */
+.provider-group-header {
+  grid-column: 1 / -1;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 32px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.provider-group-header:first-child {
+  margin-top: 0;
+}
+
+.provider-group-badge {
+  background-color: #ef4444; /* match special tag */
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+
 /* Product Card */
 .product-card {
   background-color: var(--card-bg);

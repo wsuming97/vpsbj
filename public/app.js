@@ -36,82 +36,111 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    filtered.forEach(product => {
-      const clone = template.content.cloneNode(true);
-      
-      clone.querySelector('.provider-badge').textContent = product.providerName;
-      clone.querySelector('.product-name').textContent = product.name;
-      clone.querySelector('.product-price').textContent = product.price;
+    if (currentFilter === 'special') {
+      // 在“特价VPS”下按商家分组显示
+      const grouped = {};
+      filtered.forEach(p => {
+        const prov = p.providerName || '其他';
+        if (!grouped[prov]) grouped[prov] = [];
+        grouped[prov].push(p);
+      });
 
-      // Handle specs block
-      clone.querySelector('.dc-val').textContent = (product.datacenters || []).join(', ');
-      
-      // Fallback in case specs object is missing
-      const sp = product.specs || {};
-      clone.querySelector('.cpu-val').textContent = `${sp.cpu || '?'} / ${sp.ram || '?'}`;
-      clone.querySelector('.disk-val').textContent = sp.disk || '?';
-      clone.querySelector('.bw-val').textContent = `${sp.bandwidth || '?'} / ${sp.port || '?'}`;
-      
-      // Render tags below title
-      const routingTagsBox = clone.querySelector('.routing-tags');
-      const allTags = product.networkRoutes || [];
-      routingTagsBox.innerHTML = allTags.map(tag => {
-        let cssClass = 'tag-normal';
-        if (tag.includes('CN2 GIA') || tag.includes('9929') || tag.includes('CMIN2')) cssClass = 'tag-premium';
-        if (tag.includes('优化') || tag.includes('软银')) cssClass = 'tag-optimized';
-        return `<span class="pill-tag ${cssClass}">${tag}</span>`;
-      }).join('');
+      const sortedProviders = Object.keys(grouped).sort();
 
-      const statusContainer = clone.querySelector('.stock-status');
-      const buyBtn = clone.querySelector('.btn-buy');
-      
-      // Setup stock status UI
-      if (product.inStock === true) {
-        statusContainer.innerHTML = `<span class="status-badge in-stock">✅ 有货</span>`;
-        buyBtn.classList.add('active');
-        buyBtn.href = product.affUrl || product.checkUrl;
-        buyBtn.textContent = '🛒 立即购买';
-        buyBtn.style.pointerEvents = 'auto';
-      } else if (product.inStock === null) {
-        // 还没检测到，显示检测中
-        statusContainer.innerHTML = `<span class="status-badge checking">⏳ 检测中</span>`;
-        buyBtn.classList.remove('active');
-        buyBtn.textContent = '检测中...';
-        buyBtn.href = '#';
-        buyBtn.style.pointerEvents = 'none';
-      } else {
-        const errorMsg = product.statusMessage && product.statusMessage.startsWith('Error') ? '探测异常' : '缺货状态';
-        statusContainer.innerHTML = `<span class="status-badge oos">❌ ${errorMsg}</span>`;
-        buyBtn.classList.remove('active');
-        buyBtn.textContent = '暂时缺货';
-        buyBtn.href = '#';
-        buyBtn.style.pointerEvents = 'none';
-      }
-      
-      // Setup tools
-      const speedtest = clone.querySelector('.test-link');
-      if (product.speedtestUrl) {
-        speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
-      } else {
-        speedtest.style.display = 'none';
-      }
+      sortedProviders.forEach(providerName => {
+        // 添加商家分组标题
+        const header = document.createElement('div');
+        header.className = 'provider-group-header';
+        header.innerHTML = `<span class="provider-group-badge">${grouped[providerName].length}</span> ${providerName} 特价专区`;
+        grid.appendChild(header);
 
-      // 显示优惠码提示（如果有）
-      if (product.promoCode) {
-        const promoEl = document.createElement('div');
-        promoEl.className = 'promo-code-tip';
-        promoEl.innerHTML = `🎫 优惠码：<code class="promo-code" title="点击复制">${product.promoCode}</code>`;
-        promoEl.querySelector('.promo-code').addEventListener('click', (e) => {
-          navigator.clipboard.writeText(product.promoCode).then(() => {
-            e.target.textContent = '已复制 ✓';
-            setTimeout(() => { e.target.textContent = product.promoCode; }, 1500);
-          });
+        // 渲染该商家下的卡片
+        grouped[providerName].forEach(product => {
+          renderSingleCard(product);
         });
-        buyBtn.parentNode.insertBefore(promoEl, buyBtn.nextSibling);
-      }
-      
-      grid.appendChild(clone);
-    });
+      });
+    } else {
+      // 其他标签页正常直接显示
+      filtered.forEach(product => {
+        renderSingleCard(product);
+      });
+    }
+  }
+
+  function renderSingleCard(product) {
+    const clone = template.content.cloneNode(true);
+    
+    clone.querySelector('.provider-badge').textContent = product.providerName;
+    clone.querySelector('.product-name').textContent = product.name;
+    clone.querySelector('.product-price').textContent = product.price;
+
+    // Handle specs block
+    clone.querySelector('.dc-val').textContent = (product.datacenters || []).join(', ');
+    
+    // Fallback in case specs object is missing
+    const sp = product.specs || {};
+    clone.querySelector('.cpu-val').textContent = `${sp.cpu || '?'} / ${sp.ram || '?'}`;
+    clone.querySelector('.disk-val').textContent = sp.disk || '?';
+    clone.querySelector('.bw-val').textContent = `${sp.bandwidth || '?'} / ${sp.port || '?'}`;
+    
+    // Render tags below title
+    const routingTagsBox = clone.querySelector('.routing-tags');
+    const allTags = product.networkRoutes || [];
+    routingTagsBox.innerHTML = allTags.map(tag => {
+      let cssClass = 'tag-normal';
+      if (tag.includes('CN2 GIA') || tag.includes('9929') || tag.includes('CMIN2')) cssClass = 'tag-premium';
+      if (tag.includes('优化') || tag.includes('软银')) cssClass = 'tag-optimized';
+      return `<span class="pill-tag ${cssClass}">${tag}</span>`;
+    }).join('');
+
+    const statusContainer = clone.querySelector('.stock-status');
+    const buyBtn = clone.querySelector('.btn-buy');
+    
+    // Setup stock status UI
+    if (product.inStock === true) {
+      statusContainer.innerHTML = `<span class="status-badge in-stock">✅ 有货</span>`;
+      buyBtn.classList.add('active');
+      buyBtn.href = product.affUrl || product.checkUrl;
+      buyBtn.textContent = '🛒 立即购买';
+      buyBtn.style.pointerEvents = 'auto';
+    } else if (product.inStock === null) {
+      statusContainer.innerHTML = `<span class="status-badge checking">⏳ 检测中</span>`;
+      buyBtn.classList.remove('active');
+      buyBtn.textContent = '检测中...';
+      buyBtn.href = '#';
+      buyBtn.style.pointerEvents = 'none';
+    } else {
+      const errorMsg = product.statusMessage && product.statusMessage.startsWith('Error') ? '探测异常' : '缺货状态';
+      statusContainer.innerHTML = `<span class="status-badge oos">❌ ${errorMsg}</span>`;
+      buyBtn.classList.remove('active');
+      buyBtn.textContent = '暂时缺货';
+      buyBtn.href = '#';
+      buyBtn.style.pointerEvents = 'none';
+    }
+    
+    // Setup tools
+    const speedtest = clone.querySelector('.test-link');
+    if (product.speedtestUrl) {
+      speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
+    } else {
+      speedtest.style.display = 'none';
+    }
+
+    // 显示优惠码提示
+    if (product.promoCode) {
+      const promoEl = document.createElement('div');
+      promoEl.className = 'promo-code-tip';
+      promoEl.innerHTML = `🎫 优惠码：<code class="promo-code" title="点击复制">${product.promoCode}</code>`;
+      promoEl.querySelector('.promo-code').addEventListener('click', (e) => {
+        navigator.clipboard.writeText(product.promoCode).then(() => {
+          e.target.textContent = '已复制 ✓';
+          setTimeout(() => { e.target.textContent = product.promoCode; }, 1500);
+        });
+      });
+      buyBtn.parentNode.insertBefore(promoEl, buyBtn.nextSibling);
+    }
+    
+    grid.appendChild(clone);
   }
 
   // Render filter tabs
