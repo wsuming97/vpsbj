@@ -164,6 +164,76 @@ async function closeDiscoverBrowser() {
 }
 
 // ============================================================
+// 从产品页面抓取真实名称和价格
+// ============================================================
+async function scrapeProductDetails(browser, url) {
+  const details = { name: null, price: null, specs: {} };
+  const page = await browser.newPage();
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await sleep(4000);
+
+    // 从页面中提取产品名称和价格
+    const info = await page.evaluate(() => {
+      const result = { name: null, price: null };
+
+      // ── 提取产品名称 ──
+      // WHMCS 常见结构：h1、.product-name、#product-name、页面 title
+      const nameEl = document.querySelector('h1') ||
+                     document.querySelector('.product-name') ||
+                     document.querySelector('.product-title') ||
+                     document.querySelector('#product-name');
+      if (nameEl) {
+        let n = nameEl.textContent.trim();
+        // 清理无用前缀如 "Configure" "Order"
+        n = n.replace(/^(Configure|Order|配置)\s*/i, '').trim();
+        if (n && n.length > 1 && n.length < 150) result.name = n;
+      }
+      // 降级：从 title 提取
+      if (!result.name && document.title) {
+        const t = document.title.replace(/- .*$/, '').replace(/\|.*$/, '').trim();
+        if (t && t.length > 2 && t.length < 100) result.name = t;
+      }
+
+      // ── 提取价格（优先年付） ──
+      // 查找所有包含价格的文字
+      const allText = document.body.innerText;
+
+      // 方法1：查找 Annually 行
+      const annualMatch = allText.match(/Annually[\s\S]*?\$(\d+[.,]\d{2})/i);
+      if (annualMatch) {
+        result.price = `$${annualMatch[1]}/年`;
+      }
+      // 方法2：查找 Monthly 行
+      if (!result.price) {
+        const monthlyMatch = allText.match(/Monthly[\s\S]*?\$(\d+[.,]\d{2})/i);
+        if (monthlyMatch) {
+          result.price = `$${monthlyMatch[1]}/月`;
+        }
+      }
+      // 方法3：直接找第一个价格
+      if (!result.price) {
+        const priceMatch = allText.match(/\$(\d+[.,]\d{2})\s*(?:USD|美元)?/i);
+        if (priceMatch) {
+          result.price = `$${priceMatch[1]}`;
+        }
+      }
+
+      return result;
+    });
+
+    details.name = info.name;
+    details.price = info.price;
+
+  } catch (err) {
+    console.log(`[Discoverer]     ⚠️ 抓取产品详情失败: ${err.message}`);
+  } finally {
+    await page.close();
+  }
+  return details;
+}
+
+// ============================================================
 // 从 WHMCS gid 列表页提取所有 PID
 // ============================================================
 async function extractPidsFromGidPage(browser, url) {
@@ -361,17 +431,27 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       );
 
       if (!exists) {
+        // 自动抓取产品页面获取真实名称和价格
+        const productUrl = `https://${source.domain}/cart.php?a=add&pid=${pid}`;
+        console.log(`[Discoverer]     📝 抓取产品详情: PID=${pid}`);
+        const details = await scrapeProductDetails(browser, productUrl);
+        await sleep(1500);
+
+        const realName = details.name || `${source.providerName} 新品 (pid=${pid})`;
+        const realPrice = details.price || '价格待确认';
+        console.log(`[Discoverer]     → 名称: ${realName}, 价格: ${realPrice}`);
+
         const newEntry = {
           id: `${source.provider}-auto-${pid}`,
           provider: source.provider,
           providerName: source.providerName,
-          name: `${source.providerName} 自动发现 (pid=${pid})`,
-          price: '待确认',
+          name: realName,
+          price: realPrice,
           specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
           datacenters: ['待确认'],
           networkRoutes: ['待确认'],
           outOfStockKeywords: source.outOfStockKeywords || ['Out of Stock', 'out of stock'],
-          checkUrl: `https://${source.domain}/cart.php?a=add&pid=${pid}`,
+          checkUrl: productUrl,
           affUrl: `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}`,
           isSpecialOffer: true
         };
@@ -400,18 +480,27 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       const src = SCAN_SOURCES.find(s => s.provider === cp.provider);
       const affParam = src ? src.affParam : '';
 
+      // 自动抓取产品页面获取真实名称和价格
+      const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
+      console.log(`[Discoverer]     📝 抓取竞品站新品详情: PID=${cp.pid}`);
+      const details = await scrapeProductDetails(browser, productUrl);
+      await sleep(1500);
+
+      const realName = details.name || `${cp.providerName} 新品 (pid=${cp.pid})`;
+      const realPrice = details.price || '价格待确认';
+
       const newEntry = {
         id: `${cp.provider}-auto-${cp.pid}`,
         provider: cp.provider,
         providerName: cp.providerName,
-        name: `${cp.providerName} 自动发现 (pid=${cp.pid})`,
-        price: '待确认',
+        name: realName,
+        price: realPrice,
         specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
         datacenters: ['待确认'],
         networkRoutes: ['待确认'],
         outOfStockKeywords: ['Out of Stock', 'out of stock'],
-        checkUrl: `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`,
-        affUrl: affParam ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}` : `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`,
+        checkUrl: productUrl,
+        affUrl: affParam ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}` : productUrl,
         isSpecialOffer: true
       };
       catalogRef.push(newEntry);
