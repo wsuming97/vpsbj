@@ -262,7 +262,7 @@ async function scrapeProductDetails(browser, url) {
       }
 
       // ── 从页面文本中识别优惠码 ──
-      const allText = document.body.innerText;
+      // allText 已在上方第 229 行声明
 
       // 常见优惠码模式：Coupon: XXXXX / Promo Code: XXXXX / 优惠码：XXXXX
       if (!result.promoCode) {
