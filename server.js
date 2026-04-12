@@ -97,6 +97,38 @@ app.post('/api/admin/catalog', requireAdmin, (req, res) => {
   res.json({ success: true, data: newProduct });
 });
 
+// 编辑产品信息（名称、价格、优惠码等）
+app.put('/api/admin/catalog/:id', requireAdmin, (req, res) => {
+  const id = req.params.id;
+  const productIndex = catalog.findIndex(p => p.id === id);
+  if (productIndex === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  
+  const updates = req.body;
+  // 允许编辑的字段白名单
+  const editable = ['name', 'price', 'promoCode', 'isHidden', 'affUrl', 'checkUrl'];
+  editable.forEach(field => {
+    if (updates[field] !== undefined) {
+      catalog[productIndex][field] = updates[field];
+    }
+  });
+  
+  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  reloadCatalog();
+  res.json({ success: true, data: catalog[productIndex] });
+});
+
+// 删除产品
+app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
+  const id = req.params.id;
+  const idx = catalog.findIndex(p => p.id === id);
+  if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  
+  catalog.splice(idx, 1);
+  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  reloadCatalog();
+  res.json({ success: true });
+});
+
 // ============================================================
 // 测速后端端点（LibreSpeed 兼容）
 // 前端 speedtest_worker.js 会调用这些路由来测量下载/上传/Ping 速度

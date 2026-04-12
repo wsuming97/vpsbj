@@ -6,64 +6,166 @@
   <title>VPS 监控管理后台</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 20px; }
-    .container { max-width: 1000px; margin: 0 auto; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-    h1 { margin-top: 0; font-size: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
     
-    #login-screen { text-align: center; margin-top: 100px; }
-    #login-screen input { padding: 10px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 6px; }
-    #login-screen button { padding: 10px 20px; font-size: 16px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    /* Login */
+    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: #1e293b; padding: 40px; border-radius: 16px; text-align: center; }
+    .login-box h2 { margin-bottom: 20px; font-size: 1.5rem; }
+    .login-box input { padding: 10px 16px; font-size: 16px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; width: 240px; }
+    .login-box button { padding: 10px 24px; font-size: 16px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; margin-left: 8px; }
+    .login-box button:hover { background: #1d4ed8; }
     
-    #dashboard { display: none; }
+    /* Dashboard */
+    #dashboard { display: none; max-width: 1200px; margin: 0 auto; padding: 20px; }
     
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f8fafc; font-weight: 600; color: #475569; }
+    /* Header Bar */
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .admin-header h1 { font-size: 1.25rem; }
+    .admin-stats { display: flex; gap: 16px; font-size: 0.875rem; color: #94a3b8; }
+    .stat-item { background: #1e293b; padding: 6px 14px; border-radius: 8px; }
+    .stat-num { font-weight: 700; color: #e2e8f0; }
     
-    .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
-    .btn-off { background: #ef4444; color: white; }
-    .btn-on { background: #10b981; color: white; }
+    /* Toolbar */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; padding: 8px 14px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 0.875rem; }
+    .search-input::placeholder { color: #64748b; }
+    .filter-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.8rem; }
+    .filter-btn.active { background: #2563eb; border-color: #2563eb; color: white; }
     
-    .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    .status-active { background: #dcfce7; color: #166534; }
-    .status-hidden { background: #fee2e2; color: #991b1b; }
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 10px 12px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #1e293b; background: #0f172a; position: sticky; top: 0; }
+    td { padding: 10px 12px; border-bottom: 1px solid #1e293b; font-size: 0.875rem; vertical-align: top; }
+    tr:hover { background: #1e293b; }
     
-    .toast { position: fixed; bottom: 20px; right: 20px; background: #334155; color: white; padding: 12px 24px; border-radius: 8px; display: none; }
+    /* Product info */
+    .prod-name { font-weight: 600; color: #f1f5f9; }
+    .prod-id { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+    .prod-link { font-size: 0.75rem; color: #3b82f6; word-break: break-all; }
+    .prod-link:hover { text-decoration: underline; }
+    .prod-price { font-weight: 600; color: #fbbf24; }
+    .prod-promo { display: inline-block; background: #422006; color: #fbbf24; padding: 1px 6px; border-radius: 4px; font-size: 0.75rem; font-family: monospace; }
+    
+    /* Status */
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+    .badge-active { background: #064e3b; color: #34d399; }
+    .badge-hidden { background: #450a0a; color: #f87171; }
+    .badge-pending { background: #422006; color: #fbbf24; }
+    
+    /* Buttons */
+    .btn { padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.15s; }
+    .btn:hover { filter: brightness(1.15); }
+    .btn-green { background: #059669; color: white; }
+    .btn-red { background: #dc2626; color: white; }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-gray { background: #334155; color: #94a3b8; }
+    .btn-sm { padding: 2px 8px; font-size: 0.75rem; }
+    .action-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+    
+    /* Edit Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #1e293b; border-radius: 12px; padding: 24px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { margin-bottom: 16px; font-size: 1.1rem; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #e2e8f0; font-size: 0.875rem; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 24px; border-radius: 8px; display: none; z-index: 2000; font-weight: 500; }
   </style>
 </head>
 <body>
 
   <div id="login-screen">
-    <h2>VPS 监控管理后台</h2>
-    <input type="password" id="admin-pwd" placeholder="输入管理员密码">
-    <button onclick="login()">登录</button>
+    <div class="login-box">
+      <h2>🔐 VPS 监控管理后台</h2>
+      <input type="password" id="admin-pwd" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')login()">
+      <button onclick="login()">登录</button>
+    </div>
   </div>
 
-  <div class="container" id="dashboard">
-    <h1>
-      📦 在监控产品列表
-      <button class="btn btn-on" onclick="loadData()">刷新数据</button>
-    </h1>
-    <table>
-      <thead>
-        <tr>
-          <th>商家</th>
-          <th>产品名称</th>
-          <th>价格</th>
-          <th>当前状态</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody id="catalog-body">
-        <tr><td colspan="5">加载中...</td></tr>
-      </tbody>
-    </table>
+  <div id="dashboard">
+    <div class="admin-header">
+      <h1>📦 产品监控管理后台</h1>
+      <div class="admin-stats">
+        <span class="stat-item">总计 <span class="stat-num" id="stat-total">0</span></span>
+        <span class="stat-item">监控中 <span class="stat-num" id="stat-active">0</span></span>
+        <span class="stat-item">待确认 <span class="stat-num" id="stat-pending">0</span></span>
+        <span class="stat-item">已下架 <span class="stat-num" id="stat-hidden">0</span></span>
+      </div>
+    </div>
+    
+    <div class="toolbar">
+      <input class="search-input" id="search" placeholder="🔍 搜索产品名称、ID、商家..." oninput="filterTable()">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">全部</button>
+      <button class="filter-btn" data-filter="pending" onclick="setFilter(this)">⚠️ 待确认</button>
+      <button class="filter-btn" data-filter="active" onclick="setFilter(this)">监控中</button>
+      <button class="filter-btn" data-filter="hidden" onclick="setFilter(this)">已下架</button>
+      <button class="btn btn-blue" onclick="loadData()">🔄 刷新</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>商家</th>
+            <th>产品名称 / 来源链接</th>
+            <th>价格</th>
+            <th>优惠码</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="catalog-body">
+          <tr><td colspan="6">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <div id="toast" class="toast">操作成功</div>
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h3>✏️ 编辑产品信息</h3>
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label>产品名称</label>
+        <input id="edit-name" placeholder="如：1GB KVM VPS (2025新年特惠)">
+      </div>
+      <div class="form-group">
+        <label>价格</label>
+        <input id="edit-price" placeholder="如：$11.49/年">
+      </div>
+      <div class="form-group">
+        <label>优惠码 (选填)</label>
+        <input id="edit-promo" placeholder="如：NY2025">
+      </div>
+      <div class="form-group">
+        <label>购买链接 (affUrl)</label>
+        <input id="edit-affurl" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label>检测链接 (checkUrl)</label>
+        <input id="edit-checkurl" placeholder="https://...">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-gray" onclick="closeModal()">取消</button>
+        <button class="btn btn-blue" onclick="saveEdit()">💾 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
 
   <script>
     let token = '';
+    let allData = [];
+    let currentFilter = 'all';
 
     function login() {
       token = document.getElementById('admin-pwd').value;
@@ -74,74 +176,186 @@
     async function loadData() {
       try {
         const res = await fetch('/api/admin/catalog', { headers: { 'Authorization': token } });
-        if (res.status === 401) {
-          alert('密码错误');
-          return;
-        }
+        if (res.status === 401) { alert('密码错误'); return; }
         const json = await res.json();
         
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         
-        renderTable(json.data);
-      } catch (err) {
-        console.error(err);
+        allData = json.data;
+        updateStats();
+        filterTable();
+      } catch (err) { console.error(err); }
+    }
+
+    function updateStats() {
+      document.getElementById('stat-total').textContent = allData.length;
+      document.getElementById('stat-active').textContent = allData.filter(x => !x.isHidden).length;
+      document.getElementById('stat-pending').textContent = allData.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品')).length;
+      document.getElementById('stat-hidden').textContent = allData.filter(x => x.isHidden).length;
+    }
+
+    function setFilter(btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      filterTable();
+    }
+
+    function filterTable() {
+      const query = document.getElementById('search').value.toLowerCase();
+      let filtered = allData;
+      
+      // Filter by status
+      if (currentFilter === 'pending') {
+        filtered = filtered.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品'));
+      } else if (currentFilter === 'active') {
+        filtered = filtered.filter(x => !x.isHidden);
+      } else if (currentFilter === 'hidden') {
+        filtered = filtered.filter(x => x.isHidden);
       }
+      
+      // Search
+      if (query) {
+        filtered = filtered.filter(x => 
+          (x.name || '').toLowerCase().includes(query) ||
+          (x.id || '').toLowerCase().includes(query) ||
+          (x.providerName || '').toLowerCase().includes(query) ||
+          (x.provider || '').toLowerCase().includes(query)
+        );
+      }
+      
+      renderTable(filtered);
     }
 
     function renderTable(data) {
       const tbody = document.getElementById('catalog-body');
-      tbody.innerHTML = '';
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:40px;">没有符合条件的产品</td></tr>';
+        return;
+      }
       
-      data.forEach(item => {
-        const tr = document.createElement('tr');
+      tbody.innerHTML = data.map(item => {
+        const isPending = item.price === '待确认' || item.price === '价格待确认' || item.name.includes('自动发现') || item.name.includes('新品 (pid=');
         
-        const isHidden = item.isHidden;
-        const statusHtml = isHidden 
-          ? '<span class="status-badge status-hidden">已下架</span>' 
-          : '<span class="status-badge status-active">监控中</span>';
-          
-        const btnHtml = isHidden
-          ? `<button class="btn btn-on" onclick="toggleProduct('${item.id}')">上架 (恢复监控)</button>`
-          : `<button class="btn btn-off" onclick="toggleProduct('${item.id}')">下架 (隐藏网页)</button>`;
-
-        tr.innerHTML = `
+        let statusBadge;
+        if (item.isHidden) {
+          statusBadge = '<span class="badge badge-hidden">已下架</span>';
+        } else if (isPending) {
+          statusBadge = '<span class="badge badge-pending">待确认</span>';
+        } else {
+          statusBadge = '<span class="badge badge-active">监控中</span>';
+        }
+        
+        const toggleBtn = item.isHidden
+          ? `<button class="btn btn-green btn-sm" onclick="toggleProduct('${item.id}')">上架</button>`
+          : `<button class="btn btn-red btn-sm" onclick="toggleProduct('${item.id}')">下架</button>`;
+        
+        const checkUrl = item.checkUrl || '';
+        const promoHtml = item.promoCode ? `<span class="prod-promo">${item.promoCode}</span>` : '<span style="color:#475569">无</span>';
+        
+        return `<tr>
           <td>${item.providerName || item.provider}</td>
-          <td><strong>${item.name}</strong><br><small style="color:#64748b">${item.id}</small></td>
-          <td>${item.price}</td>
-          <td>${statusHtml}</td>
-          <td>${btnHtml}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+          <td>
+            <div class="prod-name">${item.name}</div>
+            <div class="prod-id">${item.id}</div>
+            ${checkUrl ? `<a class="prod-link" href="${checkUrl}" target="_blank">🔗 ${checkUrl.substring(0, 60)}...</a>` : ''}
+          </td>
+          <td><span class="prod-price">${item.price || '?'}</span></td>
+          <td>${promoHtml}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-blue btn-sm" onclick="openEdit('${item.id}')">✏️</button>
+              ${toggleBtn}
+              <button class="btn btn-gray btn-sm" onclick="deleteProduct('${item.id}')" title="删除">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
     }
 
-    async function toggleProduct(id) {
-      if (!confirm('确定要切换该产品的状态吗？操作将实时生效，无需重启服务器。')) return;
+    function openEdit(id) {
+      const item = allData.find(x => x.id === id);
+      if (!item) return;
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-name').value = item.name || '';
+      document.getElementById('edit-price').value = item.price || '';
+      document.getElementById('edit-promo').value = item.promoCode || '';
+      document.getElementById('edit-affurl').value = item.affUrl || '';
+      document.getElementById('edit-checkurl').value = item.checkUrl || '';
+      document.getElementById('edit-modal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('edit-modal').classList.remove('show');
+    }
+
+    async function saveEdit() {
+      const id = document.getElementById('edit-id').value;
+      const body = {
+        name: document.getElementById('edit-name').value,
+        price: document.getElementById('edit-price').value,
+        promoCode: document.getElementById('edit-promo').value || null,
+        affUrl: document.getElementById('edit-affurl').value,
+        checkUrl: document.getElementById('edit-checkurl').value,
+      };
       
       try {
-        const res = await fetch(`/api/admin/catalog/${id}/toggle`, {
-          method: 'POST',
-          headers: { 'Authorization': token }
+        const res = await fetch(`/api/admin/catalog/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
         const json = await res.json();
         if (json.success) {
-          showToast(json.isHidden ? '产品已下架并隐藏' : '产品已上架并恢复监控');
-          loadData(); // refresh table
+          showToast('✅ 产品信息已更新');
+          closeModal();
+          loadData();
         } else {
-          alert('操作失败: ' + json.error);
+          alert('保存失败: ' + json.error);
         }
-      } catch (e) {
-        alert('网络错误');
-      }
+      } catch (e) { alert('网络错误'); }
+    }
+
+    async function toggleProduct(id) {
+      try {
+        const res = await fetch(`/api/admin/catalog/${encodeURIComponent(id)}/toggle`, {
+          method: 'POST', headers: { 'Authorization': token }
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(json.isHidden ? '已下架' : '已上架');
+          loadData();
+        }
+      } catch (e) { alert('网络错误'); }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm(`确定删除产品 ${id}？此操作不可恢复。`)) return;
+      try {
+        const res = await fetch(`/api/admin/catalog/${encodeURIComponent(id)}`, {
+          method: 'DELETE', headers: { 'Authorization': token }
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast('🗑 产品已删除');
+          loadData();
+        }
+      } catch (e) { alert('网络错误'); }
     }
 
     function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2500);
     }
+
+    // Click outside modal to close
+    document.getElementById('edit-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
   </script>
 </body>
 </html>
