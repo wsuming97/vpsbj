@@ -224,6 +224,13 @@ async function scrapeProductDetails(browser, url) {
     const info = await page.evaluate(() => {
       const result = { name: null, price: null, promoCode: null, hasPromoField: false };
 
+      // ── 检测是否无效页面 (404/失效) ──
+      const allText = document.body.innerText;
+      const title = document.title || '';
+      if (allText.includes('404 Not found') || title.includes('404 Not Found') || allText.includes('The resource requested could not be found') || allText.includes('Stack Error')) {
+        result.isInvalid = true;
+      }
+
       // ── 提取产品名称 ──
       const nameEl = document.querySelector('h1') ||
                      document.querySelector('.product-name') ||
@@ -294,6 +301,7 @@ async function scrapeProductDetails(browser, url) {
 
     details.name = info.name;
     details.price = info.price;
+    details.isInvalid = info.isInvalid; // 保存失效标志
     // URL 参数中的优惠码优先级高于页面检测
     if (!details.promoCode && info.promoCode) details.promoCode = info.promoCode;
 
@@ -381,10 +389,13 @@ async function probeCloudCone(browser, source, catalogRef) {
       // 检查是否是有效产品页面（非 404 或重定向）
       if (resp && resp.status() < 400) {
         const html = await page.content();
-        // CloudCone 页面有价格、配置信息就说明是有效产品
-        const isValid = html.includes('Create Server') || html.includes('Deploy') || 
-                        html.includes('/month') || html.includes('/yr') ||
-                        html.includes('SSD') || html.includes('RAM');
+        // CloudCone 页面有价格、配置信息就说明是有效产品，并且排除软 404 (Stack Error)
+        const isSoft404 = html.includes('Stack Error - 404 Not found!') || html.includes('We encountered a problem') || html.includes('404');
+        const hasValidText = html.includes('Create Server') || html.includes('Deploy') || 
+                             html.includes('/month') || html.includes('/yr') ||
+                             html.includes('SSD') || html.includes('RAM');
+        
+        const isValid = !isSoft404 && hasValidText;
         
         if (isValid) {
           console.log(`[Discoverer]     ✅ ID=${id} 存在！`);
@@ -867,6 +878,11 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         const details = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
+        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+           console.log(`[Discoverer]     🚫 页面失效/缺货无法获取信息，跳过上架`);
+           continue; 
+        }
+
         const realName = details.name || `${source.providerName} 新品 (pid=${pid})`;
         const realPrice = details.price || '价格待确认';
         console.log(`[Discoverer]     → 名称: ${realName}, 价格: ${realPrice}`);
@@ -958,6 +974,12 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         console.log(`[Discoverer]     📝 上下文缺价格，进页面抓: PID=${cp.pid}`);
         const details = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
+        
+        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+           console.log(`[Discoverer]     🚫 无效页面/已下架，防止产生死链垃圾，跳过`);
+           continue; 
+        }
+
         if (!realName) realName = details.name;
         realPrice = details.price;
         if (!promoCode && details.promoCode) promoCode = details.promoCode;
@@ -1012,17 +1034,25 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
             await page.goto(item.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
             await sleep(4000);
             const info = await page.evaluate(() => {
-              const r = { name: null, price: null };
+              const r = { name: null, price: null, isInvalid: false };
+              const t = document.body.innerText;
+              if (t.includes('Stack Error - 404 Not found!') || t.includes('We encountered a problem') || t.includes('404')) {
+                 r.isInvalid = true;
+                 return r;
+              }
               const h1 = document.querySelector('h1');
               if (h1) r.name = h1.textContent.trim();
               if (!r.name && document.title) r.name = document.title.replace(/- CloudCone.*$/i, '').trim();
-              const t = document.body.innerText;
               const yr = t.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
               if (yr) r.price = `$${yr[1]}/年`;
               else { const mo = t.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i); if (mo) r.price = `$${mo[1]}/月`; }
               return r;
             });
-            if (info.price) {
+            
+            if (info.isInvalid) {
+              item.isHidden = true;
+              console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
+            } else if (info.price) {
               item.price = info.price;
               if (info.name && item.name.includes('#')) item.name = info.name;
               retryFixed++;
@@ -1031,7 +1061,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           } finally { await page.close(); }
         } else {
           const details = await scrapeProductDetails(browser, item.checkUrl);
-          if (details.price) {
+          if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+             item.isHidden = true;
+             console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
+          } else if (details.price && details.price !== '价格待确认') {
             item.price = details.price;
             if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) item.name = details.name;
             if (details.promoCode && !item.promoCode) item.promoCode = details.promoCode;
