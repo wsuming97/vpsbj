@@ -6,15 +6,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 // 使用事件总线替代对 tgBot.js 的直接 import，打破循环依赖
 import eventBus from './eventBus.js';
+// 使用 SQLite 数据库替代 catalog.json
+import db from './db.js';
 
 puppeteer.use(StealthPlugin());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read catalog (make export let so we can update it)
-const catalogPath = path.join(__dirname, 'catalog.json');
-export let catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+// 从数据库加载产品列表（替代原来的 catalog.json 读取）
+export let catalog = db.getAllProducts();
 
 // Initialize state cache
 export const stockState = {};
@@ -45,11 +46,11 @@ function initStockState() {
 
 initStockState();
 
-// Add a reload function for hot-reloading
+// 热加载：从 SQLite 重新读取产品列表
 export function reloadCatalog() {
-  catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  catalog = db.getAllProducts();
   initStockState();
-  console.log(`[System] Catalog reloaded dynamically. Total products: ${catalog.length}`);
+  console.log(`[System] Catalog reloaded from SQLite. Total products: ${catalog.length}`);
 }
 
 // Sleep function to avoid hitting rate limits
@@ -139,6 +140,12 @@ export async function runScraperCycle() {
       stockState[product.id].lastChecked = new Date().toISOString();
       stockState[product.id].statusMessage = result.inStock ? 'In Stock' : 'Out of Stock';
 
+      // 记录库存翻转事件到 SQLite
+      if (previouslyInStock !== null && previouslyInStock !== result.inStock) {
+        const eventType = result.inStock ? 'restock' : 'outofstock';
+        db.recordStockEvent(product.id, eventType, product.price);
+      }
+
       // 只有从「确认缺货」变成「有货」才算补货，首次检测（null→true）不算
       if (previouslyInStock === false && result.inStock === true) {
         console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
@@ -147,6 +154,7 @@ export async function runScraperCycle() {
         let livePrice = null;
         let oldPrice = product.price;
         try {
+          const browser = await getBrowser();
           const pricePage = await browser.newPage();
           try {
             await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
@@ -219,18 +227,21 @@ export async function runScraperCycle() {
           console.log(`[Scraper] 价格实时抓取失败: ${e.message}，使用缓存价格`);
         }
 
-        // 如果抓到了新价格且和旧价格不同，更新 catalog
+        // 如果抓到了新价格且和旧价格不同，更新数据库
         let priceChanged = false;
         if (livePrice && livePrice !== oldPrice) {
           priceChanged = true;
           console.log(`💰 [PRICE UPDATE] ${product.name}: ${oldPrice} → ${livePrice}`);
-          // 更新 catalog 文件中的价格
-          const idx = catalog.findIndex(c => c.id === product.id);
-          if (idx !== -1) {
-            catalog[idx].price = livePrice;
-            fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2));
-          }
+          
+          // 更新数据库中的价格
+          db.updateProduct(product.id, { price: livePrice });
+          // 记录价格变动历史
+          db.recordPriceChange(product.id, oldPrice, livePrice);
+          
+          // 同步到内存
           stockState[product.id].price = livePrice;
+          const catIdx = catalog.findIndex(c => c.id === product.id);
+          if (catIdx !== -1) catalog[catIdx].price = livePrice;
         }
 
         restockedProducts.push({

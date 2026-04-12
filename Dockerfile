@@ -3,7 +3,7 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Install native dependencies for Puppeteer (Chromium and required libs)
+# Install native dependencies for Puppeteer (Chromium) and better-sqlite3 (编译原生模块)
 RUN apk add --no-cache \
       chromium \
       nss \
@@ -12,7 +12,10 @@ RUN apk add --no-cache \
       ca-certificates \
       ttf-freefont \
       nodejs \
-      yarn
+      yarn \
+      # better-sqlite3 原生模块编译依赖
+      build-base \
+      python3
 
 # Skip downloading Chromium, use the installed one
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
@@ -25,7 +28,7 @@ RUN npm install
 # Copy all source files
 COPY . .
 
-# Ensure data directory exists and has permissions
+# Ensure data directory exists and has permissions (SQLite 数据库文件目录)
 RUN mkdir -p data && chmod 777 data
 
 # Start the application

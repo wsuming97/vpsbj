@@ -18,6 +18,7 @@ import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import db from './db.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -951,8 +952,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
               outOfStockKeywords: source.outOfStockKeywords,
               checkUrl: `https://app.cloudcone.com/vps/${cc.id}/create`,
               affUrl: `https://app.cloudcone.com/vps/${cc.id}/create?${source.affParam}${cc.promoCode ? '&token=' + cc.promoCode : ''}`,
-              isSpecialOffer: true
+              isSpecialOffer: true,
+              source: 'discovered'
             };
+            db.addProduct(newEntry);
             catalogRef.push(newEntry);
             totalNewCount++;
             if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
@@ -1004,8 +1007,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           outOfStockKeywords: source.outOfStockKeywords || ['Out of Stock', 'out of stock'],
           checkUrl: productUrl,
           affUrl: `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}${details.promoCode ? '&promocode=' + details.promoCode : ''}`,
-          isSpecialOffer: true
+          isSpecialOffer: true,
+          source: 'discovered'
         };
+        db.addProduct(newEntry);
         catalogRef.push(newEntry);
         totalNewCount++;
         if (!newsByProvider[source.providerName]) newsByProvider[source.providerName] = [];
@@ -1043,8 +1048,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           outOfStockKeywords: ['sold out', 'Sold Out', 'unavailable'],
           checkUrl: `https://app.cloudcone.com/vps/${cp.pid}/create`,
           affUrl: `https://app.cloudcone.com/vps/${cp.pid}/create?ref=${AFF.cc}`,
-          isSpecialOffer: true
+          isSpecialOffer: true,
+          source: 'discovered'
         };
+        db.addProduct(newEntry);
         catalogRef.push(newEntry);
         totalNewCount++;
         if (isAutoLive) autoLiveCount++; else pendingCount++;
@@ -1109,8 +1116,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         affUrl: affParam
           ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}${promoCode ? '&promocode=' + promoCode : ''}`
           : productUrl,
-        isSpecialOffer: true
+        isSpecialOffer: true,
+        source: 'discovered'
       };
+      db.addProduct(newEntry);
       catalogRef.push(newEntry);
       totalNewCount++;
       if (isAutoLive) autoLiveCount++; else pendingCount++;
@@ -1155,10 +1164,14 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
             
             if (info.isInvalid) {
               item.isHidden = true;
+              db.updateProduct(item.id, { isHidden: true });
               console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
             } else if (info.price) {
+              const updates = { price: info.price };
+              if (info.name && item.name.includes('#')) updates.name = info.name;
               item.price = info.price;
-              if (info.name && item.name.includes('#')) item.name = info.name;
+              if (updates.name) item.name = updates.name;
+              db.updateProduct(item.id, updates);
               retryFixed++;
               console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
             }
@@ -1167,11 +1180,20 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           const details = await scrapeProductDetails(browser, item.checkUrl);
           if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
              item.isHidden = true;
+             db.updateProduct(item.id, { isHidden: true });
              console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
           } else if (details.price && details.price !== '价格待确认') {
+            const updates = { price: details.price };
             item.price = details.price;
-            if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) item.name = details.name;
-            if (details.promoCode && !item.promoCode) item.promoCode = details.promoCode;
+            if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) {
+              updates.name = details.name;
+              item.name = details.name;
+            }
+            if (details.promoCode && !item.promoCode) {
+              updates.promoCode = details.promoCode;
+              item.promoCode = details.promoCode;
+            }
+            db.updateProduct(item.id, updates);
             retryFixed++;
             console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
           } else {
@@ -1192,11 +1214,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     }
   }
 
-  // ── 写入 + 热加载 + TG 通知 ──
+  // ── 热加载 + TG 通知（数据已实时写入 SQLite，不再需要写 catalog.json） ──
   if (totalNewCount > 0) {
-    fs.writeFileSync(catalogPath, JSON.stringify(catalogRef, null, 2));
     reloadCatalog();
-    console.log(`\n[Discoverer] ✅ 本轮发现 ${totalNewCount} 款新品，已写入 catalog.json 并热加载`);
+    console.log(`\n[Discoverer] ✅ 本轮发现/补全 ${totalNewCount} 款产品，已写入 SQLite 并热加载`);
 
     if (bot && adminChatId) {
       let msg = `🕵️ <b>产品发现引擎报告</b>\n\n`;

@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { runScraperCycle, stockState, catalog, reloadCatalog } from './scraper.js';
+import db from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +57,18 @@ app.get('/api/vps/health', (req, res) => {
   });
 });
 
+app.get('/api/vps/stock/:productId', (req, res) => {
+  const { productId } = req.params;
+  const product = stockState[productId] || catalog.find(p => p.id === productId);
+
+  if (!product || product.isHidden) {
+    return res.status(404).json({ success: false, error: 'Product not found' });
+  }
+
+  res.json({ success: true, data: product });
+});
+
+
 // Admin API - Password protection middleware
 function requireAdmin(req, res, next) {
   const token = req.headers['authorization'];
@@ -73,25 +86,22 @@ app.get('/api/admin/catalog', requireAdmin, (req, res) => {
 
 app.post('/api/admin/catalog/:id/toggle', requireAdmin, (req, res) => {
   const id = req.params.id;
-  const productIndex = catalog.findIndex(p => p.id === id);
-  if (productIndex === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  const product = db.getProduct(id);
+  if (!product) return res.status(404).json({ success: false, error: 'Not found' });
   
-  catalog[productIndex].isHidden = !catalog[productIndex].isHidden;
-  
-  // Save to disk
-  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  const newHidden = !product.isHidden;
+  db.updateProduct(id, { isHidden: newHidden });
   
   // Hot reload
   reloadCatalog();
-  res.json({ success: true, isHidden: catalog[productIndex].isHidden });
+  res.json({ success: true, isHidden: newHidden });
 });
 
 app.post('/api/admin/catalog', requireAdmin, (req, res) => {
   const newProduct = req.body;
   if (!newProduct.id || !newProduct.name) return res.status(400).json({ success: false, error: 'Invalid product data' });
   
-  catalog.push(newProduct);
-  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  db.addProduct(newProduct);
   
   reloadCatalog();
   res.json({ success: true, data: newProduct });
@@ -100,33 +110,59 @@ app.post('/api/admin/catalog', requireAdmin, (req, res) => {
 // 编辑产品信息（名称、价格、优惠码等）
 app.put('/api/admin/catalog/:id', requireAdmin, (req, res) => {
   const id = req.params.id;
-  const productIndex = catalog.findIndex(p => p.id === id);
-  if (productIndex === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  const product = db.getProduct(id);
+  if (!product) return res.status(404).json({ success: false, error: 'Not found' });
   
   const updates = req.body;
   // 允许编辑的字段白名单
-  const editable = ['name', 'price', 'promoCode', 'isHidden', 'affUrl', 'checkUrl'];
+  const editable = ['name', 'price', 'promoCode', 'isHidden', 'affUrl', 'checkUrl', 'billingCycles', 'testEndpoints', 'locked', 'source', 'isSpecialOffer'];
+  const filteredUpdates = {};
   editable.forEach(field => {
     if (updates[field] !== undefined) {
-      catalog[productIndex][field] = updates[field];
+      filteredUpdates[field] = updates[field];
     }
   });
   
-  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  // 如果修改了价格，记录历史
+  if (filteredUpdates.price && filteredUpdates.price !== product.price) {
+    db.recordPriceChange(id, product.price, filteredUpdates.price);
+  }
+  
+  db.updateProduct(id, filteredUpdates);
   reloadCatalog();
-  res.json({ success: true, data: catalog[productIndex] });
+  res.json({ success: true, data: db.getProduct(id) });
 });
 
 // 删除产品
 app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
   const id = req.params.id;
-  const idx = catalog.findIndex(p => p.id === id);
-  if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  if (!db.productExists(id)) return res.status(404).json({ success: false, error: 'Not found' });
   
-  catalog.splice(idx, 1);
-  fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+  db.deleteProduct(id);
   reloadCatalog();
   res.json({ success: true });
+});
+
+// ============================================================
+// 历史数据 API
+// ============================================================
+
+// 获取某产品的价格和库存变动历史
+app.get('/api/vps/stock/:productId/history', (req, res) => {
+  const { productId } = req.params;
+  if (!db.productExists(productId)) {
+    return res.status(404).json({ success: false, error: 'Product not found' });
+  }
+  const priceHistory = db.getPriceHistory(productId);
+  const stockEvents = db.getStockEvents(productId);
+  res.json({ success: true, data: { priceHistory, stockEvents } });
+});
+
+// 获取全局最近动态事件
+app.get('/api/vps/events', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const events = db.getRecentEvents(limit);
+  res.json({ success: true, data: events });
 });
 
 // ============================================================
