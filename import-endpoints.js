@@ -1,68 +1,63 @@
 import db from './db.js';
 
-// 定义需要全量写入的测速节点数据
+// testEndpoints 格式与前端一致：{ label, datacenter, route, type('ip'|'url'|'lg'), value, official, note }
 const endpointsData = {
   bandwagonhost: [
-    { type: 'speedtest', url: '162.244.241.102', location: 'Los Angeles DC6 (CN2 GIA-E)' },
-    { type: 'lg', url: 'https://dc6.bwg.net/', location: 'Los Angeles DC6 (CN2 GIA-E)' },
-    { type: 'speedtest', url: '65.49.131.102', location: 'Los Angeles DC9 (CN2 GIA)' },
-    { type: 'lg', url: 'https://dc9.bwg.net/', location: 'Los Angeles DC9 (CN2 GIA)' },
-    { type: 'speedtest', url: '93.179.124.235', location: 'Hong Kong HK8 (CN2 GIA / 纯IP对标)' },
-    { type: 'speedtest', url: '45.78.18.149', location: 'Hong Kong HK3 (CMI / 纯IP对标)' }
+    { label: '洛杉矶 DC6 / CN2 GIA-E', datacenter: 'Los Angeles DC6', route: 'CN2 GIA-E', type: 'ip', value: '162.244.241.102', official: false, note: '第三方对标节点' },
+    { label: '洛杉矶 DC6 / LG', datacenter: 'Los Angeles DC6', route: 'CN2 GIA-E', type: 'lg', value: 'https://dc6.bwg.net/', official: false, note: '第三方对标节点' },
+    { label: '洛杉矶 DC9 / CN2 GIA', datacenter: 'Los Angeles DC9', route: 'CN2 GIA', type: 'ip', value: '65.49.131.102', official: false, note: '第三方对标节点' },
+    { label: '洛杉矶 DC9 / LG', datacenter: 'Los Angeles DC9', route: 'CN2 GIA', type: 'lg', value: 'https://dc9.bwg.net/', official: false, note: '第三方对标节点' },
+    { label: '香港 HK8 / CN2 GIA', datacenter: 'Hong Kong HK8', route: 'CN2 GIA', type: 'ip', value: '93.179.124.235', official: false, note: '第三方对标节点' },
+    { label: '香港 HK3 / CMI', datacenter: 'Hong Kong HK3', route: 'CMI', type: 'ip', value: '45.78.18.149', official: false, note: '第三方对标节点' }
   ],
   dmit: [
-    { type: 'speedtest', url: '154.17.0.142', location: 'LAX Premium/Pro (CN2 GIA)' },
-    { type: 'lg', url: 'https://lg.dmit.sh/', location: 'DMIT 官方综合 Looking Glass' },
-    { type: 'speedtest', url: '174.136.204.135', location: 'LAX Tier 1 (CMIN2/直连)' },
-    { type: 'speedtest', url: '154.12.190.32', location: 'TYO Pro (CN2 GIA)' },
-    { type: 'speedtest', url: '154.12.176.28', location: 'HKG Tier 1' }
+    { label: '洛杉矶 LAX / CN2 GIA (Pro)', datacenter: 'Los Angeles LAX', route: 'CN2 GIA', type: 'ip', value: '154.17.0.142', official: false, note: '第三方对标节点' },
+    { label: 'DMIT 官方 Looking Glass', datacenter: 'Multi-DC', route: '全线路', type: 'lg', value: 'https://lg.dmit.sh/', official: true, note: '官方 LG' },
+    { label: '洛杉矶 LAX / CMIN2 (T1/EB)', datacenter: 'Los Angeles LAX', route: 'CMIN2', type: 'ip', value: '174.136.204.135', official: false, note: '第三方对标节点' },
+    { label: '东京 TYO / CN2 GIA (Pro)', datacenter: 'Tokyo TYO', route: 'CN2 GIA', type: 'ip', value: '154.12.190.32', official: false, note: '第三方对标节点' },
+    { label: '香港 HKG / T1', datacenter: 'Hong Kong HKG', route: 'T1 国际', type: 'ip', value: '154.12.176.28', official: false, note: '第三方对标节点' }
   ],
   racknerd: [
-    { type: 'speedtest', url: '204.13.154.3', location: 'Los Angeles DC-02' },
-    { type: 'lg', url: 'http://lg-lax02.racknerd.com/', location: 'Los Angeles DC-02' },
-    { type: 'speedtest', url: '192.210.207.88', location: 'San Jose' },
-    { type: 'lg', url: 'http://lg-sj.racknerd.com/', location: 'San Jose' },
-    { type: 'speedtest', url: '192.3.253.2', location: 'Seattle' },
-    { type: 'lg', url: 'http://lg-sea.racknerd.com/', location: 'Seattle' }
+    { label: '洛杉矶 DC02 / 测试 IP', datacenter: 'Los Angeles DC02', route: '默认线路', type: 'ip', value: '204.13.154.3', official: true, note: '官方测试 IP' },
+    { label: '洛杉矶 DC02 / LG', datacenter: 'Los Angeles DC02', route: '默认线路', type: 'lg', value: 'http://lg-lax02.racknerd.com/', official: true, note: '官方 LG' },
+    { label: '圣何塞 SJ / 测试 IP', datacenter: 'San Jose', route: '默认线路', type: 'ip', value: '192.210.207.88', official: true, note: '官方测试 IP' },
+    { label: '圣何塞 SJ / LG', datacenter: 'San Jose', route: '默认线路', type: 'lg', value: 'http://lg-sj.racknerd.com/', official: true, note: '官方 LG' },
+    { label: '西雅图 SEA / 测试 IP', datacenter: 'Seattle', route: '默认线路', type: 'ip', value: '192.3.253.2', official: true, note: '官方测试 IP' },
+    { label: '西雅图 SEA / LG', datacenter: 'Seattle', route: '默认线路', type: 'lg', value: 'http://lg-sea.racknerd.com/', official: true, note: '官方 LG' }
   ],
-  zgo: [
-    { type: 'speedtest', url: '207.60.50.4', location: 'Los Angeles (9929/CMIN2)' },
-    { type: 'lg', url: 'https://lg.la.us.zgovps.com', location: 'Los Angeles (9929/CMIN2)' },
-    { type: 'speedtest', url: '195.245.229.134', location: 'Osaka, Japan (IIJ/软银)' },
-    { type: 'lg', url: 'https://lg.osaka.ryzen.jp.zgovps.com', location: 'Osaka, Japan (IIJ/软银)' }
+  zgocloud: [
+    { label: '洛杉矶 / 9929 CMIN2 测试 IP', datacenter: 'Los Angeles', route: '9929 / CMIN2', type: 'ip', value: '207.60.50.4', official: true, note: '官方测试 IP' },
+    { label: '洛杉矶 / LG', datacenter: 'Los Angeles', route: '9929 / CMIN2', type: 'lg', value: 'https://lg.la.us.zgovps.com', official: true, note: '官方 LG' },
+    { label: '大阪 / IIJ 软银 测试 IP', datacenter: 'Osaka', route: 'IIJ / 软银', type: 'ip', value: '195.245.229.134', official: true, note: '官方测试 IP' },
+    { label: '大阪 / LG', datacenter: 'Osaka', route: 'IIJ / 软银', type: 'lg', value: 'https://lg.osaka.ryzen.jp.zgovps.com', official: true, note: '官方 LG' }
   ],
   cloudcone: [
-    { type: 'speedtest', url: '173.254.215.111', location: 'Los Angeles (MultaCom)' },
-    { type: 'lg', url: 'http://la.lg.cloudc.one/', location: 'Los Angeles (MultaCom)' }
+    { label: '洛杉矶 / 测试 IP', datacenter: 'Los Angeles', route: 'MultaCom', type: 'ip', value: '173.254.215.111', official: true, note: '官方测试 IP' },
+    { label: '洛杉矶 / LG', datacenter: 'Los Angeles', route: 'MultaCom', type: 'lg', value: 'http://la.lg.cloudc.one/', official: true, note: '官方 LG' }
   ],
   colocrossing: [
-    { type: 'speedtest', url: '107.175.180.6', location: 'Los Angeles (低价特供)' },
-    { type: 'lg', url: 'http://lg.la.colocrossing.com', location: 'Los Angeles (低价特供)' },
-    { type: 'speedtest', url: '192.3.180.103', location: 'Buffalo / New York (美东)' },
-    { type: 'lg', url: 'http://lg.buf.colocrossing.com', location: 'Buffalo / New York (美东)' }
+    { label: '洛杉矶 / 测试 IP', datacenter: 'Los Angeles', route: '默认线路', type: 'ip', value: '107.175.180.6', official: true, note: '官方测试 IP' },
+    { label: '洛杉矶 / LG', datacenter: 'Los Angeles', route: '默认线路', type: 'lg', value: 'http://lg.la.colocrossing.com', official: true, note: '官方 LG' },
+    { label: '布法罗 BUF / 测试 IP', datacenter: 'Buffalo NY', route: '美东线路', type: 'ip', value: '192.3.180.103', official: true, note: '官方测试 IP' },
+    { label: '布法罗 BUF / LG', datacenter: 'Buffalo NY', route: '美东线路', type: 'lg', value: 'http://lg.buf.colocrossing.com', official: true, note: '官方 LG' }
   ]
 };
 
-async function run() {
-  console.log(`[Import] 开始批量更新所有产品的 testEndpoints...`);
+function run() {
+  console.log('[Import] 开始批量更新所有产品的 testEndpoints...');
   const products = db.getAllProducts();
   let updatedCount = 0;
 
   for (const product of products) {
-    const provider = product.provider.toLowerCase();
-    
-    // 如果匹配到了我们配置中的商家
+    const provider = (product.provider || '').toLowerCase();
     if (endpointsData[provider]) {
-      // 无论产品里原本有没有 testEndpoints，我们这里都全量覆盖
-      db.updateProduct(product.id, {
-        testEndpoints: endpointsData[provider]
-      });
+      db.updateProduct(product.id, { testEndpoints: endpointsData[provider] });
       updatedCount++;
+      console.log(`  ✓ ${product.id} (${product.providerName || provider})`);
     }
   }
 
-  console.log(`[Import] ✅ 成功更新了 ${updatedCount} 款产品的测速节点！`);
-  console.log(`[Import] 数据已直接写入 SQLite，即刻生效。`);
+  console.log(`[Import] ✅ 成功更新 ${updatedCount} 款产品的测速节点，数据已写入 SQLite。`);
 }
 
-run().catch(console.error);
+run();
