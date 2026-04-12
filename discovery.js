@@ -1139,6 +1139,11 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     const maxRetry = 15;
     for (const item of pendingItems.slice(0, maxRetry)) {
       if (!item.checkUrl) continue;
+      // locked 产品的静态字段受保护，跳过名称/价格覆盖（库存检测不受影响）
+      if (db.isLocked(item.id)) {
+        console.log(`[Discoverer]   🔒 ${item.id} 已锁定，跳过自动补全`);
+        continue;
+      }
       try {
         console.log(`[Discoverer]   🔁 重试: ${item.id}`);
         if (item.provider === 'cloudcone') {

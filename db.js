@@ -24,7 +24,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const DB_PATH = path.join(dataDir, 'vps.db');
+const DB_PATH = path.join(dataDir, 'vps-monitor.db');
 const db = new Database(DB_PATH);
 
 // 启用 WAL 模式，提升并发读写性能
@@ -148,6 +148,15 @@ function migrateFromCatalog() {
 
   insertMany(catalog);
   console.log(`[DB] ✅ 成功导入 ${catalog.length} 个产品到 SQLite`);
+
+  // 迁移完成后将 catalog.json 重命名为 .bak，避免被其他模块再次读取
+  const bakPath = catalogPath + '.bak';
+  try {
+    fs.renameSync(catalogPath, bakPath);
+    console.log(`[DB] 📦 catalog.json 已重命名为 catalog.json.bak（备份保留）`);
+  } catch (e) {
+    console.log(`[DB] ⚠️ catalog.json 重命名失败: ${e.message}（不影响运行）`);
+  }
 }
 
 // ============================================================
