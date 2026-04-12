@@ -281,6 +281,15 @@
     .endpoint-btn:hover {
       background: #f1f5f9;
     }
+    .endpoint-btn-info {
+      cursor: default;
+      background: #f8fafc;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+    }
+    .endpoint-btn-info:hover {
+      background: #f8fafc;
+    }
     .page-error {
       padding: 48px 24px;
       text-align: center;
@@ -391,17 +400,6 @@
       const listEl = document.getElementById('endpoint-list');
       const endpoints = Array.isArray(product.testEndpoints) ? [...product.testEndpoints] : [];
 
-      if (endpoints.length === 0 && product.speedtestUrl) {
-        endpoints.push({
-          label: '默认测速入口',
-          datacenter: (product.datacenters || []).join(' / '),
-          route: (product.networkRoutes || []).join(' / '),
-          type: 'url',
-          value: product.speedtestUrl,
-          note: '兜底测速入口'
-        });
-      }
-
       if (endpoints.length === 0) {
         listEl.innerHTML = '<div class="endpoint-card"><div class="endpoint-main"><div class="endpoint-label">暂无测试节点信息</div><div class="endpoint-meta">当前商品还没有录入测试 IP / LG / Speedtest 节点。</div></div></div>';
         return;
@@ -418,7 +416,7 @@
         const cards = items.map((endpoint, index) => {
           const actionButton = endpoint.type === 'ip'
             ? `<button class="endpoint-btn" data-copy="${escapeHtml(endpoint.value)}">复制 IP</button>`
-            : `<a class="endpoint-btn" href="${escapeHtml(endpoint.value)}" target="_blank" rel="noopener noreferrer">打开节点</a>`;
+            : `<span class="endpoint-btn endpoint-btn-info" title="仅供参考，请自行访问">${escapeHtml(endpoint.type === 'lg' ? 'LG 节点' : '测速节点')}</span>`;
 
           return `
             <div class="endpoint-card">
