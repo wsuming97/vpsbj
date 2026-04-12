@@ -45,12 +45,44 @@ document.addEventListener('DOMContentLoaded', () => {
         grouped[prov].push(p);
       });
 
-      const sortedProviders = Object.keys(grouped).sort();
+      // 对特价区商家进行过滤与排位：仅展示高优商家，或将杂牌沉底
+      const priority = ['DMIT', '搬瓦工', 'RackNerd', 'CloudCone', 'ColoCrossing', 'ZGO Cloud'];
+      const sortedProviders = Object.keys(grouped).sort((a, b) => {
+        const idxA = priority.indexOf(a);
+        const idxB = priority.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      // 在特价区首部增加一个商家快捷电梯导航（仅在特价区显示），替代全局搜索框
+      const jumpNav = document.createElement('div');
+      jumpNav.className = 'special-jump-nav';
+      jumpNav.style.cssText = 'grid-column: 1 / -1; display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 20px;';
+      
+      const navTitle = document.createElement('span');
+      navTitle.textContent = '🧭 快速直达:';
+      navTitle.style.cssText = 'font-weight:bold; color:var(--text-muted); line-height:30px;';
+      jumpNav.appendChild(navTitle);
+
+      sortedProviders.forEach(providerName => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.style.cssText = 'padding: 4px 12px; font-size: 0.85rem; border-radius: 6px;';
+        btn.textContent = `${providerName} (${grouped[providerName].length})`;
+        btn.onclick = () => {
+          document.getElementById('provider-' + providerName).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        jumpNav.appendChild(btn);
+      });
+      grid.appendChild(jumpNav);
 
       sortedProviders.forEach(providerName => {
         // 添加商家分组标题
         const header = document.createElement('div');
         header.className = 'provider-group-header';
+        header.id = 'provider-' + providerName;
         header.innerHTML = `<span class="provider-group-badge">${grouped[providerName].length}</span> ${providerName} 特价专区`;
         grid.appendChild(header);
 
