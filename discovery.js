@@ -145,19 +145,27 @@ const SCAN_SOURCES = [
 // 这些站点会汇总各商家最新活动链接，从中提取 pid 和产品链接
 // ============================================================
 const COMPETITOR_SOURCES = [
-  // 库存站
+  // ── 库存站 ──
   { name: '搬瓦工库存站 (bwh91)', url: 'https://stock.bwh91.com/' },
   { name: 'DMIT库存站 (dmitea)', url: 'https://stock.dmitea.com/' },
-  // VPS 活动聚合/测评站
-  { name: '便宜VPS (pianyivps)', url: 'https://www.pianyivps.com/' },
-  { name: 'VPS交流网', url: 'https://www.vpsjxw.com/' },
-  { name: 'RAK VPS', url: 'https://rakvps.com/' },
-  // 英文 VPS 优惠聚合
-  { name: 'VNCoupon (CloudCone)', url: 'https://vncoupon.com/tag/cloudcone/' },
-  { name: 'VNCoupon (RackNerd)', url: 'https://vncoupon.com/tag/racknerd/' },
-  // 商家官方活动页
+  // ── VPS 活动聚合/测评站（首页，可获取最新活动帖链接） ──
+  { name: '便宜VPS (pianyivps)', url: 'https://www.pianyivps.com/', deepScan: true },
+  { name: 'VPS交流网', url: 'https://www.vpsjxw.com/', deepScan: true },
+  { name: 'RAK VPS', url: 'https://rakvps.com/', deepScan: true },
+  // ── VNCoupon 标签页（列表页 → 进入每篇活动详情提取产品链接） ──
+  { name: 'VNCoupon (CloudCone)', url: 'https://vncoupon.com/tag/cloudcone/', deepScan: true },
+  { name: 'VNCoupon (RackNerd)', url: 'https://vncoupon.com/tag/racknerd/', deepScan: true },
+  { name: 'VNCoupon (DMIT)', url: 'https://vncoupon.com/tag/dmit/', deepScan: true },
+  // ── VNCoupon 已知的重要活动详情页（直接含产品链接） ──
+  { name: 'VNCoupon CC Hashtag活动', url: 'https://vncoupon.com/cloudcone-hashtag-2026-sale/' },
+  { name: 'VNCoupon CC KVM特价', url: 'https://vncoupon.com/cloudcone-hourly-billed-kvm-offers-semi-managed-cloud-server/' },
+  { name: 'VNCoupon RN 新年特价', url: 'https://vncoupon.com/racknerd-new-year-2022-vps-hosting-deals/' },
+  { name: 'VNCoupon 便宜VPS列表', url: 'https://vncoupon.com/a-list-of-cheap-vps-hosting-under-12-year/' },
+  // ── 商家官方活动页 ──
   { name: 'CloudCone Offers', url: 'https://cloudcone.com/offers/' },
-  { name: 'RackNerd Blog', url: 'https://www.racknerd.com/blog/' },
+  { name: 'RackNerd Blog', url: 'https://www.racknerd.com/blog/', deepScan: true },
+  // ── LowEndTalk / LowEndBox ──
+  { name: 'LowEndBox', url: 'https://lowendbox.com/', deepScan: true },
 ];
 
 // ============================================================
@@ -648,49 +656,100 @@ async function extractFromCompetitorSites() {
       const html = await cloudscraper.get(source.url);
       const $ = cheerio.load(html);
 
-      // 遍历页面中所有链接
-      $('a[href]').each((_, el) => {
-        const href = $(el).attr('href') || '';
+      // 定义处理一页 HTML 的函数
+      function processPage(p$, pageName) {
+        p$('a[href]').each((_, el) => {
+          const href = p$(el).attr('href') || '';
 
-        // ── WHMCS 格式: pid=XXX ──
-        const pidMatch = href.match(/(?:https?:\/\/)?(?:www\.)?([\w.-]+)[^\s]*pid=(\d+)/i);
-        if (pidMatch) {
-          const matchedDomain = pidMatch[1];
-          const pid = pidMatch[2];
-          for (const [key, info] of Object.entries(domainMap)) {
-            if (matchedDomain.includes(key)) {
-              const dedup = `${info.provider}-${pid}`;
-              if (!seen.has(dedup)) {
-                seen.add(dedup);
-                const ctx = extractContext($, el);
-                allPids.push({ pid, ...info, ...ctx });
+          // ── WHMCS 格式: pid=XXX ──
+          const pidMatch = href.match(/(?:https?:\/\/)?(?:www\.)?([\w.-]+)[^\s]*pid=(\d+)/i);
+          if (pidMatch) {
+            const matchedDomain = pidMatch[1];
+            const pid = pidMatch[2];
+            for (const [key, info] of Object.entries(domainMap)) {
+              if (matchedDomain.includes(key)) {
+                const dedup = `${info.provider}-${pid}`;
+                if (!seen.has(dedup)) {
+                  seen.add(dedup);
+                  const ctx = extractContext(p$, el);
+                  allPids.push({ pid, ...info, ...ctx });
+                }
+                break;
               }
-              break;
             }
           }
-        }
 
-        // ── CloudCone 格式: app.cloudcone.com/vps/{id}/create ──
-        const ccMatch = href.match(/app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/i);
-        if (ccMatch) {
-          const ccId = ccMatch[1];
-          const dedup = `cloudcone-${ccId}`;
-          if (!seen.has(dedup)) {
-            seen.add(dedup);
-            const ctx = extractContext($, el);
-            allPids.push({
-              pid: ccId,
-              provider: 'cloudcone',
-              providerName: 'CloudCone',
-              domain: 'app.cloudcone.com',
-              isCloudCone: true,
-              ...ctx,
-            });
+          // ── CloudCone 格式: app.cloudcone.com/vps/{id}/create ──
+          const ccMatch = href.match(/app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/i);
+          if (ccMatch) {
+            const ccId = ccMatch[1];
+            const dedup = `cloudcone-${ccId}`;
+            if (!seen.has(dedup)) {
+              seen.add(dedup);
+              const ctx = extractContext(p$, el);
+              allPids.push({
+                pid: ccId,
+                provider: 'cloudcone',
+                providerName: 'CloudCone',
+                domain: 'app.cloudcone.com',
+                isCloudCone: true,
+                ...ctx,
+              });
+            }
+          }
+        });
+      }
+
+      // 处理当前页面
+      processPage($, source.name);
+      const beforeCount = allPids.length;
+
+      // ── 两级扫描：如果源标记了 deepScan，进入每篇文章详情页去抓产品链接 ──
+      if (source.deepScan) {
+        // 提取本页所有内部文章链接（测评站文章通常包含在同域名下）
+        const articleLinks = new Set();
+        const sourceHost = new URL(source.url).hostname;
+        $('a[href]').each((_, el) => {
+          const href = $(el).attr('href') || '';
+          try {
+            const u = new URL(href, source.url);
+            // 同域名、是文章路径（有多层的）、且非标签/分类/分页、非当前页
+            if (u.hostname === sourceHost &&
+                u.pathname.length > 5 &&
+                !u.pathname.match(/\/(tag|category|page|author|feed|wp-|#)\//i) &&
+                u.pathname !== new URL(source.url).pathname) {
+              // 只留包含特价/活动关键词的文章，或商家名的文章
+              const linkText = $(el).text().toLowerCase();
+              const pathLower = u.pathname.toLowerCase();
+              const isRelevant =
+                /cloudcone|racknerd|dmit|bandwagon|colocross|zgo/i.test(pathLower + ' ' + linkText) ||
+                /sale|deal|promo|offer|coupon|cheap|\$\d|flash|special|holiday|christmas|easter|black.?friday|new.?year|hashtag/i.test(pathLower + ' ' + linkText);
+              if (isRelevant) {
+                articleLinks.add(u.href);
+              }
+            }
+          } catch {}
+        });
+
+        // 只深入前 8 篇文章（避免太慢）
+        const articles = [...articleLinks].slice(0, 8);
+        if (articles.length > 0) {
+          console.log(`[Discoverer]     📎 深入扫描 ${articles.length} 篇相关文章...`);
+        }
+        for (const articleUrl of articles) {
+          try {
+            const aHtml = await cloudscraper.get(articleUrl);
+            const a$ = cheerio.load(aHtml);
+            processPage(a$, articleUrl);
+            await sleep(800);
+          } catch (err) {
+            console.log(`[Discoverer]       ⚠️ 文章扫描失败: ${err.message}`);
           }
         }
-      });
+      }
 
-      console.log(`[Discoverer]     从 ${source.name} 提取到 ${[...seen].filter(k => !allPids.find(p => `${p.provider}-${p.pid}` !== k)).length || allPids.length} 条链接`);
+      const found = allPids.length - beforeCount;
+      if (found > 0) console.log(`[Discoverer]     ✅ 从 ${source.name} 提取到 ${found} 条新链接`);
     } catch (err) {
       console.log(`[Discoverer]   ⚠️ 辅助源失败 [${source.name}]: ${err.message}`);
     }
