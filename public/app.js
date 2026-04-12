@@ -19,6 +19,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function parsePriceNumber(priceText) {
+    if (!priceText) return null;
+    const match = String(priceText).replace(/,/g, '').match(/\$(\d+(?:\.\d+)?)/);
+    return match ? Number(match[1]) : null;
+  }
+
+  function formatDiscount(basePrice, currentPrice) {
+    if (!basePrice || !currentPrice || currentPrice <= 0 || currentPrice >= basePrice) return null;
+    const discount = ((basePrice - currentPrice) / basePrice) * 100;
+    return `-${discount.toFixed(2)}%`;
+  }
+
+  function buildBillingCyclesHtml(product) {
+    const cycles = product.billingCycles;
+    if (!cycles || typeof cycles !== 'object') return '';
+
+    const cycleMeta = [
+      ['semiAnnually', '半年缴'],
+      ['annually', '年缴'],
+      ['biennially', '两年缴'],
+      ['triennially', '三年缴']
+    ];
+
+    const basePrice = parsePriceNumber(cycles.semiAnnually || product.price);
+    const items = cycleMeta
+      .filter(([key]) => cycles[key])
+      .map(([key, label]) => {
+        const currentPrice = parsePriceNumber(cycles[key]);
+        const discount = formatDiscount(basePrice, currentPrice);
+        const isBase = key === 'semiAnnually';
+        return `
+          <div class="billing-cycle-item${isBase ? ' is-base' : ''}">
+            <span class="billing-cycle-label">${label}</span>
+            <span class="billing-cycle-price">${cycles[key]}</span>
+            ${discount ? `<span class="billing-cycle-discount">${discount}</span>` : ''}
+          </div>
+        `;
+      });
+
+    if (items.length === 0) return '';
+
+    return `
+      <div class="billing-cycles-header">缴费年限价格</div>
+      <div class="billing-cycles-grid">${items.join('')}</div>
+    `;
+  }
+
   // Render cards based on current data and filter
   function renderCards() {
     grid.innerHTML = '';
@@ -106,6 +153,16 @@ document.addEventListener('DOMContentLoaded', () => {
     clone.querySelector('.product-name').textContent = product.name;
     clone.querySelector('.product-price').textContent = product.price;
 
+    const billingCyclesBox = clone.querySelector('.billing-cycles');
+    const billingCyclesHtml = buildBillingCyclesHtml(product);
+    if (billingCyclesHtml) {
+      billingCyclesBox.hidden = false;
+      billingCyclesBox.innerHTML = billingCyclesHtml;
+    } else {
+      billingCyclesBox.hidden = true;
+      billingCyclesBox.innerHTML = '';
+    }
+
     // Handle specs block
     clone.querySelector('.dc-val').textContent = (product.datacenters || []).join(', ');
     
@@ -152,11 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup tools
     const speedtest = clone.querySelector('.test-link');
-    if (product.speedtestUrl) {
-      speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
-    } else {
-      speedtest.style.display = 'none';
-    }
+    speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
+    speedtest.title = '打开站内测速页';
 
     // 显示优惠码提示
     if (product.promoCode) {

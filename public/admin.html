@@ -187,6 +187,14 @@
         <label>检测链接 (checkUrl)</label>
         <input id="edit-checkurl" placeholder="https://...">
       </div>
+      <div class="form-group">
+        <label>缴费周期 JSON (billingCycles)</label>
+        <textarea id="edit-billingcycles" placeholder='{"semiAnnually":"$48.88 USD","annually":"$88.88 USD"}' style="width:100%;min-height:110px;padding:10px 14px;background:#f8fafc;border:1px solid var(--card-border);border-radius:10px;color:var(--text-main);font-size:0.9rem;outline:none;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>测速节点 JSON (testEndpoints)</label>
+        <textarea id="edit-testendpoints" placeholder='[{"label":"洛杉矶 / CN2 GIA","type":"url","value":"https://example.com"}]' style="width:100%;min-height:130px;padding:10px 14px;background:#f8fafc;border:1px solid var(--card-border);border-radius:10px;color:var(--text-main);font-size:0.9rem;outline:none;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;"></textarea>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-gray" onclick="closeModal()">取消</button>
         <button class="btn btn-blue" onclick="saveEdit()">💾 保存</button>
@@ -318,6 +326,8 @@
       document.getElementById('edit-promo').value = item.promoCode || '';
       document.getElementById('edit-affurl').value = item.affUrl || '';
       document.getElementById('edit-checkurl').value = item.checkUrl || '';
+      document.getElementById('edit-billingcycles').value = item.billingCycles ? JSON.stringify(item.billingCycles, null, 2) : '';
+      document.getElementById('edit-testendpoints').value = item.testEndpoints ? JSON.stringify(item.testEndpoints, null, 2) : '';
       document.getElementById('edit-modal').classList.add('show');
     }
 
@@ -327,14 +337,29 @@
 
     async function saveEdit() {
       const id = document.getElementById('edit-id').value;
+      let billingCycles;
+      let testEndpoints;
+
+      try {
+        const billingCyclesText = document.getElementById('edit-billingcycles').value.trim();
+        const testEndpointsText = document.getElementById('edit-testendpoints').value.trim();
+        billingCycles = billingCyclesText ? JSON.parse(billingCyclesText) : null;
+        testEndpoints = testEndpointsText ? JSON.parse(testEndpointsText) : null;
+      } catch (e) {
+        alert('JSON 格式有误，请检查 billingCycles / testEndpoints');
+        return;
+      }
+
       const body = {
         name: document.getElementById('edit-name').value,
         price: document.getElementById('edit-price').value,
         promoCode: document.getElementById('edit-promo').value || null,
         affUrl: document.getElementById('edit-affurl').value,
         checkUrl: document.getElementById('edit-checkurl').value,
+        billingCycles,
+        testEndpoints,
       };
-      
+
       try {
         const res = await fetch(`/api/admin/catalog/${encodeURIComponent(id)}`, {
           method: 'PUT',

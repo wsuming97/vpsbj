@@ -26,6 +26,18 @@
     ],
     "priority": "high",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC99 / CN2 GIA",
+        "datacenter": "Los Angeles DC99",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc99.bwh91.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ],
     "speedtestUrl": "https://dc99.bwh91.com/"
   },
   {
@@ -56,6 +68,18 @@
       "out of stock"
     ],
     "priority": "high",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC6/DC9 / CN2 GIA",
+        "datacenter": "Los Angeles DC6/DC9",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc69.bwh91.com",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ],
     "speedtestUrl": "https://dc69.bwh91.com"
   },
   {
@@ -86,6 +110,18 @@
       "out of stock"
     ],
     "priority": "high",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC6/DC9 / CN2 GIA",
+        "datacenter": "Los Angeles DC6/DC9",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc69.bwh91.com",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ],
     "speedtestUrl": "https://dc69.bwh91.com"
   },
   {
@@ -114,6 +150,18 @@
       "out of stock"
     ],
     "priority": "medium",
+    "testEndpoints": [
+      {
+        "label": "香港 PCCW / CN2 GIA",
+        "datacenter": "Hong Kong PCCW",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hk85.bwh91.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ],
     "speedtestUrl": "https://hk85.bwh91.com/"
   },
   {
@@ -143,6 +191,28 @@
       "out of stock"
     ],
     "priority": "low",
+    "testEndpoints": [
+      {
+        "label": "迪拜 / 普通线路",
+        "datacenter": "Dubai",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "第三方对标节点，覆盖 Basic 系列",
+        "source": "https://stock.bwh91.com/"
+      },
+      {
+        "label": "洛杉矶 DC3/DC8 / 普通线路",
+        "datacenter": "Los Angeles DC3/DC8",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "第三方对标节点，和迪拜共用测速入口",
+        "source": "https://stock.bwh91.com/"
+      }
+    ],
     "speedtestUrl": "https://basic.bwh91.com/"
   },
   {
@@ -173,6 +243,18 @@
       "Available: 0"
     ],
     "priority": "high",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 LAX / sPro",
+        "datacenter": "Los Angeles LAX",
+        "route": "CN2 GIA / CMIN2",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
     "speedtestUrl": "https://lapro.dmitea.com/"
   },
   {
@@ -202,6 +284,18 @@
       "out of stock"
     ],
     "priority": "high",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 LAX / Eyeball",
+        "datacenter": "Los Angeles LAX",
+        "route": "联通 9929 / CMIN2",
+        "type": "url",
+        "value": "https://laeb.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
     "speedtestUrl": "https://laeb.dmitea.com/"
   },
   {
@@ -230,6 +324,18 @@
       "out of stock"
     ],
     "priority": "medium",
+    "testEndpoints": [
+      {
+        "label": "香港 / Pro",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
     "speedtestUrl": "https://hkpro.dmitea.com/"
   },
   {
@@ -258,6 +364,18 @@
       "out of stock"
     ],
     "priority": "medium",
+    "testEndpoints": [
+      {
+        "label": "东京 / Pro",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jppro.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
     "speedtestUrl": "https://jppro.dmitea.com/"
   },
   {
@@ -286,6 +404,18 @@
       "out of stock"
     ],
     "priority": "low",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 LAX / T1",
+        "datacenter": "Los Angeles LAX",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://lat1.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
     "speedtestUrl": "https://lat1.dmitea.com/"
   },
   {
@@ -320,7 +450,129 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
-    "speedtestUrl": "https://rnsjc.vpszdm.com/"
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / Looking Glass",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / Looking Glass",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / Looking Glass",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / Looking Glass",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / Looking Glass",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "id": "rn-2024-2gb",
@@ -354,7 +606,129 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
-    "speedtestUrl": "https://rnsjc.vpszdm.com/"
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / Looking Glass",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / Looking Glass",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / Looking Glass",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / Looking Glass",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / Looking Glass",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "RackNerd 官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "id": "rn-2024-2.5gb",
@@ -388,7 +762,129 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
-    "speedtestUrl": "https://rnsjc.vpszdm.com/"
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "id": "zgo-la-g",
@@ -416,6 +912,18 @@
       "out of stock"
     ],
     "priority": "low",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": true,
+        "note": "商家官方测速节点",
+        "source": "https://clients.zgovps.com/"
+      }
+    ],
     "speedtestUrl": "https://speedzglobal.990599.xyz/"
   },
   {
@@ -445,6 +953,18 @@
       "out of stock"
     ],
     "priority": "medium",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / China Optimized",
+        "datacenter": "Los Angeles",
+        "route": "CMIN2 / 9929",
+        "type": "url",
+        "value": "https://speedzcn.990599.xyz/",
+        "official": true,
+        "note": "商家官方优化线路测速节点",
+        "source": "https://clients.zgovps.com/"
+      }
+    ],
     "speedtestUrl": "https://speedzcn.990599.xyz/"
   },
   {
@@ -476,6 +996,18 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 MC / Looking Glass",
+        "datacenter": "Los Angeles MC",
+        "route": "普通线路 / 优化可选",
+        "type": "lg",
+        "value": "http://la.lg.cloudc.one/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://app.cloudcone.com/"
+      }
+    ],
     "speedtestUrl": "http://la.lg.cloudc.one/"
   },
   {
@@ -506,6 +1038,18 @@
     ],
     "priority": "high",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "http://lg.la.colocrossing.com/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://cloud.colocrossing.com/"
+      }
+    ],
     "speedtestUrl": "http://lg.la.colocrossing.com/"
   },
   {
@@ -536,6 +1080,18 @@
     ],
     "priority": "high",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "http://lg.la.colocrossing.com/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://cloud.colocrossing.com/"
+      }
+    ],
     "speedtestUrl": "http://lg.la.colocrossing.com/"
   },
   {
@@ -566,6 +1122,18 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "http://lg.la.colocrossing.com/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://cloud.colocrossing.com/"
+      }
+    ],
     "speedtestUrl": "http://lg.la.colocrossing.com/"
   },
   {
@@ -596,6 +1164,18 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "http://lg.la.colocrossing.com/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://cloud.colocrossing.com/"
+      }
+    ],
     "speedtestUrl": "http://lg.la.colocrossing.com/"
   },
   {
@@ -626,6 +1206,18 @@
     ],
     "priority": "medium",
     "isSpecialOffer": true,
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Looking Glass",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "http://lg.la.colocrossing.com/",
+        "official": true,
+        "note": "官方 Looking Glass",
+        "source": "https://cloud.colocrossing.com/"
+      }
+    ],
     "speedtestUrl": "http://lg.la.colocrossing.com/"
   },
   {
@@ -654,7 +1246,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=152",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=152"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=152",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC99 / CN2 GIA",
+        "datacenter": "Los Angeles DC99",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc99.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -682,7 +1286,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=153",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=153"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=153",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC99 / CN2 GIA",
+        "datacenter": "Los Angeles DC99",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc99.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -710,7 +1326,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=156",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=156"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=156",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC1 / QNET",
+        "datacenter": "Los Angeles DC1",
+        "route": "QNET",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -738,7 +1366,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=157",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=157"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=157",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC1 / QNET",
+        "datacenter": "Los Angeles DC1",
+        "route": "QNET",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -766,7 +1406,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=145",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=145"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=145",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC9 / CN2 GIA",
+        "datacenter": "Los Angeles DC9",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc69.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点 (DC6/DC9)",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -794,7 +1446,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=149",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=149"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=149",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC6 / CN2 GIA",
+        "datacenter": "Los Angeles DC6",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc69.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点 (DC6/DC9)",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -822,7 +1486,19 @@
       "联通9929 / AS9929"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=159",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=159"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=159",
+    "testEndpoints": [
+      {
+        "label": "荷兰阿姆斯特丹 / 普通线路",
+        "datacenter": "Amsterdam",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "bwh91 通用测速节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -850,7 +1526,29 @@
       "普通线路"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=158",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=158"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=158",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC99 / CN2 GIA",
+        "datacenter": "Los Angeles DC99",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc99.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      },
+      {
+        "label": "洛杉矶 DC3/DC8 / 普通线路",
+        "datacenter": "Los Angeles DC3/DC8",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -878,7 +1576,19 @@
       "软银"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=163",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=163"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=163",
+    "testEndpoints": [
+      {
+        "label": "东京 / 软银线路",
+        "datacenter": "Tokyo",
+        "route": "软银",
+        "type": "url",
+        "value": "https://jp1.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -906,7 +1616,19 @@
       "软银"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=146",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=146"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=146",
+    "testEndpoints": [
+      {
+        "label": "大阪 / 软银线路",
+        "datacenter": "Osaka",
+        "route": "软银",
+        "type": "url",
+        "value": "https://jp2.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -934,7 +1656,19 @@
       "软银"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=134",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=134"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=134",
+    "testEndpoints": [
+      {
+        "label": "大阪 JPOS6 / 软银线路",
+        "datacenter": "Osaka",
+        "route": "软银",
+        "type": "url",
+        "value": "https://jp2.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -962,7 +1696,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=108",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=108"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=108",
+    "testEndpoints": [
+      {
+        "label": "东京 / CN2 GIA",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jptyo.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -990,7 +1736,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=94",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=94"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=94",
+    "testEndpoints": [
+      {
+        "label": "新加坡 / 普通线路",
+        "datacenter": "Singapore",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://sg.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -1018,7 +1776,29 @@
       "普通线路"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=44",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=44"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=44",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC99 / CN2 GIA",
+        "datacenter": "Los Angeles DC99",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://dc99.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      },
+      {
+        "label": "洛杉矶 DC3/DC8 / 普通线路",
+        "datacenter": "Los Angeles DC3/DC8",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://basic.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -1047,7 +1827,19 @@
       "高可用SLA"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=164",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=164"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=164",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 DC5 / ZNET SLA",
+        "datacenter": "Los Angeles DC5",
+        "route": "CN2 GIA SLA",
+        "type": "url",
+        "value": "https://dc69.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "bandwagonhost",
@@ -1075,7 +1867,19 @@
       "软银"
     ],
     "checkUrl": "https://bandwagonhost.com/cart.php?a=add&pid=147",
-    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=147"
+    "affUrl": "https://bandwagonhost.com/aff.php?aff=81381&pid=147",
+    "testEndpoints": [
+      {
+        "label": "大阪 / 软银线路",
+        "datacenter": "Osaka",
+        "route": "软银",
+        "type": "url",
+        "value": "https://jp2.bwh91.com/",
+        "official": false,
+        "note": "bwh91 对标节点",
+        "source": "https://stock.bwh91.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1104,7 +1908,19 @@
       "CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=183",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=183"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=183",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA (Pro)",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1133,7 +1949,19 @@
       "CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=186",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=186"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=186",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA (Pro)",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1162,7 +1990,19 @@
       "CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=182",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=182"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=182",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA (Pro)",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1191,7 +2031,19 @@
       "CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=181",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=181"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=181",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA (Pro)",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1219,7 +2071,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=217",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=217"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=217",
+    "testEndpoints": [
+      {
+        "label": "香港 / CN2 GIA (Pro)",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1247,7 +2111,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=233",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=233"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=233",
+    "testEndpoints": [
+      {
+        "label": "香港 / CN2 GIA (Pro)",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1275,7 +2151,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=178",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=178"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=178",
+    "testEndpoints": [
+      {
+        "label": "香港 / CN2 GIA (Pro)",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1303,7 +2191,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=187",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=187"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=187",
+    "testEndpoints": [
+      {
+        "label": "香港 / CN2 GIA (Pro)",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1331,7 +2231,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=123",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=123"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=123",
+    "testEndpoints": [
+      {
+        "label": "香港 / CN2 GIA (Pro)",
+        "datacenter": "Hong Kong",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://hkpro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1359,7 +2271,19 @@
       "回国优化"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=231",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=231"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=231",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Eyeball (EB)",
+        "datacenter": "Los Angeles",
+        "route": "Eyeball",
+        "type": "url",
+        "value": "https://laeb.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1387,7 +2311,19 @@
       "回国优化"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=218",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=218"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=218",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Eyeball (EB)",
+        "datacenter": "Los Angeles",
+        "route": "Eyeball",
+        "type": "url",
+        "value": "https://laeb.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1415,7 +2351,19 @@
       "回国优化"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=219",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=219"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=219",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Eyeball (EB)",
+        "datacenter": "Los Angeles",
+        "route": "Eyeball",
+        "type": "url",
+        "value": "https://laeb.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1443,7 +2391,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=138",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=138"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=138",
+    "testEndpoints": [
+      {
+        "label": "东京 / CN2 GIA (Pro)",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jppro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1471,7 +2431,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=139",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=139"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=139",
+    "testEndpoints": [
+      {
+        "label": "东京 / CN2 GIA (Pro)",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jppro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1499,7 +2471,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=140",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=140"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=140",
+    "testEndpoints": [
+      {
+        "label": "东京 / CN2 GIA (Pro)",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jppro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1527,7 +2511,19 @@
       "CN2 GIA"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=141",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=141"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=141",
+    "testEndpoints": [
+      {
+        "label": "东京 / CN2 GIA (Pro)",
+        "datacenter": "Tokyo",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://jppro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1555,7 +2551,19 @@
       "国际线路"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=71",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=71"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=71",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / 国际线路 (T1)",
+        "datacenter": "Los Angeles",
+        "route": "国际线路",
+        "type": "url",
+        "value": "https://lat1.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1583,7 +2591,19 @@
       "国际线路"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=197",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=197"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=197",
+    "testEndpoints": [
+      {
+        "label": "香港 / 国际线路 (T1)",
+        "datacenter": "Hong Kong",
+        "route": "国际线路",
+        "type": "url",
+        "value": "https://hkt1.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1611,7 +2631,19 @@
       "国际线路"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=228",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=228"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=228",
+    "testEndpoints": [
+      {
+        "label": "东京 / 国际线路 (T1)",
+        "datacenter": "Tokyo",
+        "route": "国际线路",
+        "type": "url",
+        "value": "https://jpt1.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "dmit",
@@ -1623,22 +2655,48 @@
     ],
     "isSpecialOffer": false,
     "id": "dmit-new-237",
-    "name": "DMIT 新品 (pid=237)",
-    "price": "待确认",
-    "specs": {
-      "cpu": "待确认",
-      "ram": "待确认",
-      "disk": "待确认",
-      "bandwidth": "待确认"
+    "name": "LAX.AN4.Pro.TINY",
+    "price": "$48.88 USD",
+    "billingCycles": {
+      "semiAnnually": "$48.88 USD",
+      "annually": "$88.88 USD",
+      "biennially": "$159.99 USD",
+      "triennially": "$229.99 USD"
     },
+    "specs": {
+      "cpu": "1 vCPU",
+      "ram": "2 GB",
+      "disk": "20 GB SSD",
+      "bandwidth": "1000 GB/mo + 4 Mbps 不计量",
+      "port": "1 Gbps",
+      "ipv4": "1 IPv4",
+      "ipv6": "1 IPv6 /64"
+    },
+    "series": "AN4",
+    "routeType": "Premium (CN2 GIA + CMIN2)",
+    "ddosProtection": true,
     "datacenters": [
-      "待确认"
+      "Los Angeles LAX"
     ],
     "networkRoutes": [
-      "待确认"
+      "👑 CN2 GIA",
+      "🚀 CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=237",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=237"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=237",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 LAX / AN4 Pro",
+        "datacenter": "Los Angeles LAX",
+        "route": "CN2 GIA / CMIN2",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点，按 LAX Pro 系列映射",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
+    "speedtestUrl": "https://lapro.dmitea.com/"
   },
   {
     "provider": "dmit",
@@ -1650,22 +2708,48 @@
     ],
     "isSpecialOffer": false,
     "id": "dmit-new-245",
-    "name": "DMIT 新品 (pid=245)",
-    "price": "待确认",
-    "specs": {
-      "cpu": "待确认",
-      "ram": "待确认",
-      "disk": "待确认",
-      "bandwidth": "待确认"
+    "name": "LAX.AN4.EB.TINY",
+    "price": "$48.88 USD",
+    "billingCycles": {
+      "semiAnnually": "$48.88 USD",
+      "annually": "$88.88 USD",
+      "biennially": "$159.99 USD",
+      "triennially": "$229.99 USD"
     },
+    "specs": {
+      "cpu": "1 vCPU",
+      "ram": "2 GB",
+      "disk": "20 GB SSD",
+      "bandwidth": "1500 GB/mo + 4 Mbps 不计量",
+      "port": "2 Gbps",
+      "ipv4": "1 IPv4",
+      "ipv6": "1 IPv6 /64"
+    },
+    "series": "AN4",
+    "routeType": "Eyeball (联通 9929 + CMIN2)",
+    "ddosProtection": true,
     "datacenters": [
-      "待确认"
+      "Los Angeles LAX"
     ],
     "networkRoutes": [
-      "待确认"
+      "联通 9929",
+      "🚀 CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=245",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=245"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=245",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 LAX / AN4 Eyeball",
+        "datacenter": "Los Angeles LAX",
+        "route": "联通 9929 / CMIN2",
+        "type": "url",
+        "value": "https://laeb.dmitea.com/",
+        "official": false,
+        "note": "第三方对标节点，按 LAX Eyeball 系列映射",
+        "source": "https://stock.dmitea.com/"
+      }
+    ],
+    "speedtestUrl": "https://laeb.dmitea.com/"
   },
   {
     "provider": "dmit",
@@ -1694,7 +2778,19 @@
       "CMIN2"
     ],
     "checkUrl": "https://www.dmit.io/cart.php?a=add&pid=179",
-    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=179"
+    "affUrl": "https://www.dmit.io/aff.php?aff=16687&pid=179",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA (Super Pro)",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://lapro.dmitea.com/",
+        "official": false,
+        "note": "dmitea 对标节点 (SPro 复用 Pro)",
+        "source": "https://stock.dmitea.com/"
+      }
+    ]
   },
   {
     "provider": "racknerd",
@@ -1715,13 +2811,141 @@
       "port": "1 Gbps"
     },
     "datacenters": [
-      "多机房可选"
+      "Los Angeles",
+      "San Jose",
+      "Seattle",
+      "Chicago",
+      "New York",
+      "Ashburn"
     ],
     "networkRoutes": [
       "普通线路"
     ],
     "checkUrl": "https://my.racknerd.com/cart.php?a=add&pid=903",
-    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=903"
+    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=903",
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "provider": "racknerd",
@@ -1742,13 +2966,141 @@
       "port": "1 Gbps"
     },
     "datacenters": [
-      "多机房可选"
+      "Los Angeles",
+      "San Jose",
+      "Seattle",
+      "Chicago",
+      "New York",
+      "Ashburn"
     ],
     "networkRoutes": [
       "普通线路"
     ],
     "checkUrl": "https://my.racknerd.com/cart.php?a=add&pid=904",
-    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=904"
+    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=904",
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "provider": "racknerd",
@@ -1769,13 +3121,141 @@
       "port": "1 Gbps"
     },
     "datacenters": [
-      "多机房可选"
+      "Los Angeles",
+      "San Jose",
+      "Seattle",
+      "Chicago",
+      "New York",
+      "Ashburn"
     ],
     "networkRoutes": [
       "普通线路"
     ],
     "checkUrl": "https://my.racknerd.com/cart.php?a=add&pid=905",
-    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=905"
+    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=905",
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "provider": "racknerd",
@@ -1796,13 +3276,141 @@
       "port": "1 Gbps"
     },
     "datacenters": [
-      "多机房可选"
+      "Los Angeles",
+      "San Jose",
+      "Seattle",
+      "Chicago",
+      "New York",
+      "Ashburn"
     ],
     "networkRoutes": [
       "普通线路"
     ],
     "checkUrl": "https://my.racknerd.com/cart.php?a=add&pid=906",
-    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=906"
+    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=906",
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "provider": "racknerd",
@@ -1823,13 +3431,141 @@
       "port": "1 Gbps"
     },
     "datacenters": [
-      "多机房可选"
+      "Los Angeles",
+      "San Jose",
+      "Seattle",
+      "Chicago",
+      "New York",
+      "Ashburn"
     ],
     "networkRoutes": [
       "普通线路"
     ],
     "checkUrl": "https://my.racknerd.com/cart.php?a=add&pid=907",
-    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=907"
+    "affUrl": "https://my.racknerd.com/aff.php?aff=19252&pid=907",
+    "testEndpoints": [
+      {
+        "label": "Los Angeles / LG",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-lax.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Los Angeles / 测试 IP",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "204.13.154.3",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-lax.racknerd.com/"
+      },
+      {
+        "label": "San Jose / LG",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sjc.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "San Jose / 测试 IP",
+        "datacenter": "San Jose",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.210.207.88",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sjc.racknerd.com/"
+      },
+      {
+        "label": "Seattle / LG",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-sea.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Seattle / 测试 IP",
+        "datacenter": "Seattle",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.253.2",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-sea.racknerd.com/"
+      },
+      {
+        "label": "Chicago / LG",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-chi.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Chicago / 测试 IP",
+        "datacenter": "Chicago",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "198.23.228.15",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-chi.racknerd.com/"
+      },
+      {
+        "label": "New York / LG",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ny.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "New York / 测试 IP",
+        "datacenter": "New York",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "192.3.81.8",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ny.racknerd.com/"
+      },
+      {
+        "label": "Ashburn / LG",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "lg",
+        "value": "https://lg-ash.racknerd.com/",
+        "official": true,
+        "note": "官方 LG",
+        "source": "https://racknerd.com/data-center-locations/"
+      },
+      {
+        "label": "Ashburn / 测试 IP",
+        "datacenter": "Ashburn",
+        "route": "普通线路",
+        "type": "ip",
+        "value": "107.173.166.10",
+        "official": true,
+        "note": "官方测试 IP",
+        "source": "https://lg-ash.racknerd.com/"
+      }
+    ],
+    "speedtestUrl": "https://lg-lax.racknerd.com/"
   },
   {
     "provider": "zgocloud",
@@ -1856,7 +3592,19 @@
       "国内优化"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=134",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=134"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=134",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA 优化线路",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://speedzcn.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -1883,7 +3631,19 @@
       "国内优化"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=136",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=136"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=136",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / CN2 GIA 优化线路",
+        "datacenter": "Los Angeles",
+        "route": "CN2 GIA",
+        "type": "url",
+        "value": "https://speedzcn.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -1910,7 +3670,19 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=132",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=132"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=132",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -1937,7 +3709,19 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=133",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=133"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=133",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -1964,7 +3748,19 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=121",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=121"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=121",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -1991,7 +3787,19 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=122",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=122"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=122",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -2018,7 +3826,19 @@
       "国际线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=94",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=94"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=94",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -2045,7 +3865,19 @@
       "国际线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=95",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=95"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=95",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -2072,7 +3904,19 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=125",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=125"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=125",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   },
   {
     "provider": "zgocloud",
@@ -2099,6 +3943,18 @@
       "默认线路"
     ],
     "checkUrl": "https://clients.zgovps.com/cart.php?a=add&pid=106",
-    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=106"
+    "affUrl": "https://clients.zgovps.com/aff.php?aff=912&pid=106",
+    "testEndpoints": [
+      {
+        "label": "洛杉矶 / Global 普通线路",
+        "datacenter": "Los Angeles",
+        "route": "普通线路",
+        "type": "url",
+        "value": "https://speedzglobal.990599.xyz/",
+        "official": false,
+        "note": "ZGO 社区测速",
+        "source": "https://990599.xyz/"
+      }
+    ]
   }
 ]

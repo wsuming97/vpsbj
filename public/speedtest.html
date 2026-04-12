@@ -151,6 +151,141 @@
       font-size: 0.8rem;
       color: var(--muted);
     }
+    .product-summary {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--card-border);
+      background: #fff;
+    }
+    .summary-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .summary-provider {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .summary-price {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .summary-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .summary-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .test-endpoints {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--card-border);
+      background: #f8fafc;
+    }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .endpoint-list {
+      display: grid;
+      gap: 16px;
+    }
+    .endpoint-group {
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .endpoint-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #eef4ff;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .endpoint-group-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .endpoint-group-count {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .endpoint-group-body {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+    .endpoint-card {
+      background: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .endpoint-main {
+      flex: 1;
+      min-width: 240px;
+    }
+    .endpoint-label {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .endpoint-meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+    }
+    .endpoint-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    .endpoint-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .endpoint-btn {
+      border: 1px solid var(--card-border);
+      background: #fff;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .endpoint-btn:hover {
+      background: #f1f5f9;
+    }
+    .page-error {
+      padding: 48px 24px;
+      text-align: center;
+      color: #b91c1c;
+    }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -167,11 +302,28 @@
   <div class="container">
     <div class="st-panel">
       <div class="panel-header">
-        <h1 class="panel-title">节点速度测试</h1>
-        <p class="panel-subtitle">测试你到本服务器节点的实际网络速度</p>
+        <h1 class="panel-title" id="panel-title">节点速度测试</h1>
+        <p class="panel-subtitle" id="panel-subtitle">测试你到本服务器节点的实际网络速度</p>
+      </div>
+
+      <div class="product-summary" id="product-summary" style="display:none;">
+        <div class="summary-top">
+          <div>
+            <div class="summary-provider" id="product-provider">商家</div>
+            <div class="panel-title" id="product-name" style="font-size:1.2rem;margin:4px 0 0 0;">商品名称</div>
+          </div>
+          <div class="summary-price" id="product-price">--</div>
+        </div>
+        <div class="summary-meta" id="product-meta"></div>
+      </div>
+
+      <div class="test-endpoints" id="test-endpoints" style="display:none;">
+        <div class="section-title">对应测试节点</div>
+        <div class="endpoint-list" id="endpoint-list"></div>
       </div>
 
       <div class="panel-body" style="padding: 0;">
+        <div id="page-error" class="page-error" style="display:none;"></div>
         <!-- 开始按钮 -->
         <div id="start-view" style="padding: 40px; text-align: center;">
           <button class="st-start-btn" id="btn-start">⚡ 开始测速</button>
@@ -219,6 +371,125 @@
 
   <script src="speedtest_core.js"></script>
   <script>
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('id');
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function renderProductMeta(product) {
+      const meta = [];
+      if (product.datacenters?.length) meta.push(`机房：${product.datacenters.join(' / ')}`);
+      if (product.networkRoutes?.length) meta.push(`线路：${product.networkRoutes.join(' / ')}`);
+      if (product.specs?.cpu || product.specs?.ram) meta.push(`配置：${product.specs?.cpu || '-'} / ${product.specs?.ram || '-'}`);
+      if (product.specs?.bandwidth || product.specs?.port) meta.push(`带宽：${product.specs?.bandwidth || '-'} / ${product.specs?.port || '-'}`);
+      document.getElementById('product-meta').innerHTML = meta.map(item => `<span class="summary-pill">${escapeHtml(item)}</span>`).join('');
+    }
+
+    function renderEndpoints(product) {
+      const listEl = document.getElementById('endpoint-list');
+      const endpoints = Array.isArray(product.testEndpoints) ? [...product.testEndpoints] : [];
+
+      if (endpoints.length === 0 && product.speedtestUrl) {
+        endpoints.push({
+          label: '默认测速入口',
+          datacenter: (product.datacenters || []).join(' / '),
+          route: (product.networkRoutes || []).join(' / '),
+          type: 'url',
+          value: product.speedtestUrl,
+          note: '兜底测速入口'
+        });
+      }
+
+      if (endpoints.length === 0) {
+        listEl.innerHTML = '<div class="endpoint-card"><div class="endpoint-main"><div class="endpoint-label">暂无测试节点信息</div><div class="endpoint-meta">当前商品还没有录入测试 IP / LG / Speedtest 节点。</div></div></div>';
+        return;
+      }
+
+      const grouped = endpoints.reduce((acc, endpoint) => {
+        const key = endpoint.datacenter || '未分组机房';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(endpoint);
+        return acc;
+      }, {});
+
+      listEl.innerHTML = Object.entries(grouped).map(([datacenter, items]) => {
+        const cards = items.map((endpoint, index) => {
+          const actionButton = endpoint.type === 'ip'
+            ? `<button class="endpoint-btn" data-copy="${escapeHtml(endpoint.value)}">复制 IP</button>`
+            : `<a class="endpoint-btn" href="${escapeHtml(endpoint.value)}" target="_blank" rel="noopener noreferrer">打开节点</a>`;
+
+          return `
+            <div class="endpoint-card">
+              <div class="endpoint-main">
+                <div class="endpoint-label">${escapeHtml(endpoint.label || `节点 ${index + 1}`)}</div>
+                <div class="endpoint-meta">${escapeHtml(endpoint.route || '线路待补充')} · ${escapeHtml(endpoint.type || '类型待补充').toUpperCase()}</div>
+                <div class="endpoint-value">${escapeHtml(endpoint.value || '待补充')}</div>
+                ${endpoint.note ? `<div class="endpoint-meta">备注：${escapeHtml(endpoint.note)}</div>` : ''}
+              </div>
+              <div class="endpoint-actions">${actionButton}</div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <section class="endpoint-group">
+            <div class="endpoint-group-header">
+              <div class="endpoint-group-title">${escapeHtml(datacenter)}</div>
+              <div class="endpoint-group-count">${items.length} 个节点</div>
+            </div>
+            <div class="endpoint-group-body">${cards}</div>
+          </section>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('[data-copy]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const value = btn.getAttribute('data-copy');
+          try {
+            await navigator.clipboard.writeText(value);
+            const original = btn.textContent;
+            btn.textContent = '已复制';
+            setTimeout(() => { btn.textContent = original; }, 1200);
+          } catch {
+            alert('复制失败，请手动复制');
+          }
+        });
+      });
+    }
+
+    async function loadProduct() {
+      if (!productId) {
+        const errorEl = document.getElementById('page-error');
+        errorEl.style.display = 'block';
+        errorEl.textContent = '缺少商品 ID，无法加载测速详情。';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/vps/stock/${encodeURIComponent(productId)}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '加载失败');
+
+        const product = json.data;
+        document.title = `${product.name} - 节点测速`;
+        document.getElementById('panel-title').textContent = '站内测速 + 商品节点信息';
+        document.getElementById('panel-subtitle').textContent = '页面内测速跑本站节点；下方展示该商品对应机房、线路与测试入口。';
+        document.getElementById('product-provider').textContent = product.providerName || product.provider || '商家';
+        document.getElementById('product-name').textContent = product.name || '未命名商品';
+        document.getElementById('product-price').textContent = product.price || '--';
+        document.getElementById('product-summary').style.display = 'block';
+        document.getElementById('test-endpoints').style.display = 'block';
+        renderProductMeta(product);
+        renderEndpoints(product);
+      } catch (err) {
+        const errorEl = document.getElementById('page-error');
+        errorEl.style.display = 'block';
+        errorEl.textContent = `商品加载失败：${err.message}`;
+      }
+    }
+
     document.getElementById('btn-start').addEventListener('click', function() {
       this.disabled = true;
       this.textContent = '测速中...';
@@ -243,7 +514,6 @@
         if (data.jitterStatus) document.getElementById('jitter-val').textContent = data.jitterStatus;
         if (data.clientIp) document.getElementById('client-ip').textContent = data.clientIp;
 
-        // 更新进度条
         let progress = 0;
         if (data.testState === 1) progress = data.dlProgress * 33;
         else if (data.testState === 2) progress = 33 + data.pingProgress * 33;
@@ -263,6 +533,8 @@
       document.getElementById('start-view').style.display = 'none';
       s.start();
     });
+
+    loadProduct();
   </script>
 </body>
 </html>
