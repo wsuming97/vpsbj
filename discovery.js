@@ -994,6 +994,67 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     }
   }
 
+  // ── 第三层：「待确认」自动重试补全 ──
+  const pendingItems = catalogRef.filter(c =>
+    (c.price === '价格待确认' || c.price === '待确认') && !c.isHidden
+  );
+  if (pendingItems.length > 0) {
+    console.log(`\n[Discoverer] 🔄 自动重试补全 ${pendingItems.length} 个「待确认」产品`);
+    let retryFixed = 0;
+    const maxRetry = 15;
+    for (const item of pendingItems.slice(0, maxRetry)) {
+      if (!item.checkUrl) continue;
+      try {
+        console.log(`[Discoverer]   🔁 重试: ${item.id}`);
+        if (item.provider === 'cloudcone') {
+          const page = await browser.newPage();
+          try {
+            await page.goto(item.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            await sleep(4000);
+            const info = await page.evaluate(() => {
+              const r = { name: null, price: null };
+              const h1 = document.querySelector('h1');
+              if (h1) r.name = h1.textContent.trim();
+              if (!r.name && document.title) r.name = document.title.replace(/- CloudCone.*$/i, '').trim();
+              const t = document.body.innerText;
+              const yr = t.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
+              if (yr) r.price = `$${yr[1]}/年`;
+              else { const mo = t.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i); if (mo) r.price = `$${mo[1]}/月`; }
+              return r;
+            });
+            if (info.price) {
+              item.price = info.price;
+              if (info.name && item.name.includes('#')) item.name = info.name;
+              retryFixed++;
+              console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
+            }
+          } finally { await page.close(); }
+        } else {
+          const details = await scrapeProductDetails(browser, item.checkUrl);
+          if (details.price) {
+            item.price = details.price;
+            if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) item.name = details.name;
+            if (details.promoCode && !item.promoCode) item.promoCode = details.promoCode;
+            retryFixed++;
+            console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
+          } else {
+            console.log(`[Discoverer]     ❌ 仍无法获取价格`);
+          }
+        }
+        await sleep(2000);
+      } catch (err) {
+        console.log(`[Discoverer]     ⚠️ 重试失败: ${err.message}`);
+      }
+    }
+    if (retryFixed > 0) {
+      console.log(`[Discoverer] ✅ 本轮补全了 ${retryFixed}/${pendingItems.length} 个待确认产品`);
+      totalNewCount += retryFixed;
+    }
+    if (pendingItems.length > maxRetry) {
+      console.log(`[Discoverer] ⏭️ 剩余 ${pendingItems.length - maxRetry} 个待确认将在下轮重试`);
+    }
+  }
+
   // ── 写入 + 热加载 + TG 通知 ──
   if (totalNewCount > 0) {
     fs.writeFileSync(catalogPath, JSON.stringify(catalogRef, null, 2));
