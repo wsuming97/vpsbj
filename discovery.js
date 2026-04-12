@@ -1,5 +1,5 @@
 /**
- * discoverer.js — 产品发现引擎
+ * discovery.js — 产品发现引擎
  * 
  * 功能：每 4 小时自动扫描各商家的 WHMCS 产品列表页（cart.php?gid=X），
  * 提取所有 PID，和 catalog.json 做 diff，新 PID 自动生成条目写入并热加载。
@@ -13,7 +13,7 @@
  */
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import cloudscraper from 'cloudscraper';
+import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
@@ -769,7 +769,7 @@ async function extractFromCompetitorSites() {
   for (const source of COMPETITOR_SOURCES) {
     try {
       console.log(`[Discoverer]   📡 辅助源: ${source.name}`);
-      const html = await cloudscraper.get(source.url);
+      const html = await fetch(source.url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }).then(r => r.text());
       const $ = cheerio.load(html);
 
       // 定义处理一页 HTML 的函数
@@ -854,7 +854,7 @@ async function extractFromCompetitorSites() {
         }
         for (const articleUrl of articles) {
           try {
-            const aHtml = await cloudscraper.get(articleUrl);
+            const aHtml = await fetch(articleUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }).then(r => r.text());
             const a$ = cheerio.load(aHtml);
             processPage(a$, articleUrl);
             await sleep(800);

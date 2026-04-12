@@ -72,8 +72,8 @@ app.get('/api/vps/stock/:productId', (req, res) => {
 // Admin API - Password protection middleware
 function requireAdmin(req, res, next) {
   const token = req.headers['authorization'];
-  // Hardcoded for MVP, user can change later or use ENV
-  if (token === 'admin888') {
+  const adminToken = process.env.ADMIN_TOKEN || 'admin888';
+  if (token === adminToken) {
     next();
   } else {
     res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -115,7 +115,7 @@ app.put('/api/admin/catalog/:id', requireAdmin, (req, res) => {
   
   const updates = req.body;
   // 允许编辑的字段白名单
-  const editable = ['name', 'price', 'promoCode', 'isHidden', 'affUrl', 'checkUrl', 'billingCycles', 'testEndpoints', 'locked', 'source', 'isSpecialOffer'];
+  const editable = ['name', 'price', 'promoCode', 'isHidden', 'affUrl', 'checkUrl', 'billingCycles', 'testEndpoints', 'locked', 'source', 'isSpecialOffer', 'specs', 'datacenters', 'networkRoutes', 'outOfStockKeywords'];
   const filteredUpdates = {};
   editable.forEach(field => {
     if (updates[field] !== undefined) {
