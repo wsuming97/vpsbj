@@ -140,11 +140,23 @@ const SCAN_SOURCES = [
 ];
 
 // ============================================================
-// 竞品库存站（辅助来源，不作为唯一依赖）
+// 竞品库存站 + VPS 测评/活动聚合站（辅助来源）
+// 这些站点会汇总各商家最新活动链接，从中提取 pid 和产品链接
 // ============================================================
 const COMPETITOR_SOURCES = [
+  // 库存站
   { name: '搬瓦工库存站 (bwh91)', url: 'https://stock.bwh91.com/' },
   { name: 'DMIT库存站 (dmitea)', url: 'https://stock.dmitea.com/' },
+  // VPS 活动聚合/测评站
+  { name: '便宜VPS (pianyivps)', url: 'https://www.pianyivps.com/' },
+  { name: 'VPS交流网', url: 'https://www.vpsjxw.com/' },
+  { name: 'RAK VPS', url: 'https://rakvps.com/' },
+  // 英文 VPS 优惠聚合
+  { name: 'VNCoupon (CloudCone)', url: 'https://vncoupon.com/tag/cloudcone/' },
+  { name: 'VNCoupon (RackNerd)', url: 'https://vncoupon.com/tag/racknerd/' },
+  // 商家官方活动页
+  { name: 'CloudCone Offers', url: 'https://cloudcone.com/offers/' },
+  { name: 'RackNerd Blog', url: 'https://www.racknerd.com/blog/' },
 ];
 
 // ============================================================
@@ -520,13 +532,16 @@ async function probePids(browser, source, catalogRef) {
 async function extractFromCompetitorSites() {
   const allPids = []; // { pid, provider, providerName, domain }
 
-  // 商家域名到 provider 的映射
+  // 商家域名到 provider 的映射（覆盖所有已知商家）
   const domainMap = {
     'bandwagonhost.com': { provider: 'bandwagonhost', providerName: '搬瓦工', domain: 'bandwagonhost.com' },
     'bwh81.net': { provider: 'bandwagonhost', providerName: '搬瓦工', domain: 'bandwagonhost.com' },
+    'bwh1.net': { provider: 'bandwagonhost', providerName: '搬瓦工', domain: 'bandwagonhost.com' },
     'dmit.io': { provider: 'dmit', providerName: 'DMIT', domain: 'www.dmit.io' },
     'racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', domain: 'my.racknerd.com' },
     'my.racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', domain: 'my.racknerd.com' },
+    'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', domain: 'cloud.colocrossing.com' },
+    'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', domain: 'clients.zgovps.com' },
   };
 
   for (const source of COMPETITOR_SOURCES) {
@@ -534,6 +549,7 @@ async function extractFromCompetitorSites() {
       console.log(`[Discoverer]   辅助源: ${source.name}`);
       const html = await cloudscraper.get(source.url);
 
+      // 提取 WHMCS 格式链接: pid=XXX
       const regex = /https?:\/\/(?:www\.)?([\w.-]+)[^\s"'<>]*pid=(\d+)/gi;
       let m;
       while ((m = regex.exec(html)) !== null) {
@@ -544,6 +560,22 @@ async function extractFromCompetitorSites() {
             allPids.push({ pid, ...info });
             break;
           }
+        }
+      }
+
+      // 提取 CloudCone 格式链接: app.cloudcone.com/vps/{id}/create
+      const ccRegex = /app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/gi;
+      let ccm;
+      while ((ccm = ccRegex.exec(html)) !== null) {
+        const ccId = ccm[1];
+        if (!allPids.some(p => p.provider === 'cloudcone' && p.pid === ccId)) {
+          allPids.push({
+            pid: ccId,
+            provider: 'cloudcone',
+            providerName: 'CloudCone',
+            domain: 'app.cloudcone.com',
+            isCloudCone: true,
+          });
         }
       }
     } catch (err) {
@@ -638,7 +670,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
             totalNewCount++;
             if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
             newsByProvider['CloudCone'].push(cc.id);
-            console.log(`[Discoverer]   �ƕ 新品: CloudCone ID=${cc.id} (${cc.name})`);
+            console.log(`[Discoverer]   🆕 新品: CloudCone ID=${cc.id} (${cc.name})`);
           }
         }
         continue; // CloudCone 已在内部处理完 diff，跳过后面通用的 WHMCS diff 逻辑
@@ -695,6 +727,33 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   console.log(`\n[Discoverer] 📡 辅助查漏补缺（竞品库存站）`);
   const competitorPids = await extractFromCompetitorSites();
   for (const cp of competitorPids) {
+    // CloudCone 使用不同的 URL 格式
+    if (cp.isCloudCone) {
+      const ccId = `cloudcone-auto-${cp.pid}`;
+      const ccExists = catalogRef.some(c =>
+        c.id === ccId ||
+        (c.provider === 'cloudcone' && c.checkUrl && c.checkUrl.includes(`/vps/${cp.pid}/`))
+      );
+      if (!ccExists) {
+        const newEntry = {
+          id: ccId, provider: 'cloudcone', providerName: 'CloudCone',
+          name: `CloudCone VPS #${cp.pid}`, price: '价格待确认', promoCode: null,
+          specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
+          datacenters: ['待确认'], networkRoutes: ['普通线路'],
+          outOfStockKeywords: ['sold out', 'Sold Out', 'unavailable'],
+          checkUrl: `https://app.cloudcone.com/vps/${cp.pid}/create`,
+          affUrl: `https://app.cloudcone.com/vps/${cp.pid}/create?ref=${AFF.cc}`,
+          isSpecialOffer: true
+        };
+        catalogRef.push(newEntry);
+        totalNewCount++;
+        if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
+        newsByProvider['CloudCone'].push(cp.pid);
+        console.log(`[Discoverer]   🆕 竞品站补全: CloudCone ID=${cp.pid}`);
+      }
+      continue;
+    }
+
     const exists = catalogRef.some(c =>
       (c.provider === cp.provider && c.checkUrl && c.checkUrl.includes(`pid=${cp.pid}`)) ||
       c.id === `${cp.provider}-auto-${cp.pid}` ||
