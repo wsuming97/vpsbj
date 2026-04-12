@@ -14,6 +14,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import cloudscraper from 'cloudscraper';
+import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -527,12 +528,14 @@ async function probePids(browser, source, catalogRef) {
 }
 
 // ============================================================
-// 从竞品库存站提取 PID（辅助补全）
+// 从竞品库存站/测评站智能提取产品信息（cheerio DOM 解析）
+// 返回 [{ pid, provider, providerName, domain, contextName, contextPrice, promoCode, isCloudCone }]
 // ============================================================
 async function extractFromCompetitorSites() {
-  const allPids = []; // { pid, provider, providerName, domain }
+  const allPids = [];
+  const seen = new Set(); // 去重 key：provider-pid
 
-  // 商家域名到 provider 的映射（覆盖所有已知商家）
+  // 商家域名到 provider 的映射
   const domainMap = {
     'bandwagonhost.com': { provider: 'bandwagonhost', providerName: '搬瓦工', domain: 'bandwagonhost.com' },
     'bwh81.net': { provider: 'bandwagonhost', providerName: '搬瓦工', domain: 'bandwagonhost.com' },
@@ -544,40 +547,150 @@ async function extractFromCompetitorSites() {
     'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', domain: 'clients.zgovps.com' },
   };
 
+  /**
+   * 从链接周围的 DOM 上下文中提取产品名称和价格
+   * @param {cheerio.CheerioAPI} $ - cheerio 实例
+   * @param {cheerio.Element} el - <a> 元素
+   * @returns {{ contextName: string|null, contextPrice: string|null, promoCode: string|null }}
+   */
+  function extractContext($, el) {
+    let contextName = null;
+    let contextPrice = null;
+    let promoCode = null;
+
+    // ── 1. 提取产品名称 ──
+    // 尝试从链接文字中抽有意义的名称
+    const linkText = $(el).text().trim().replace(/\s+/g, ' ');
+    if (linkText && linkText.length > 3 && linkText.length < 120 && !/^(http|img|查看|click|buy|order)/i.test(linkText)) {
+      contextName = linkText;
+    }
+
+    // 尝试从最近的文章标题提取更完整的名称
+    const article = $(el).closest('article, .post, .entry, li, tr, .product-item, .deal-item');
+    if (article.length) {
+      const heading = article.find('h1, h2, h3, h4, .entry-title, .post-title, .title').first().text().trim();
+      if (heading && heading.length > 5 && heading.length < 200) {
+        // 如果标题比链接文字信息量大，优先用标题
+        if (!contextName || heading.length > contextName.length) {
+          contextName = heading;
+        }
+      }
+    }
+
+    // 如果还没有名称，尝试从父容器的纯文本中截取
+    if (!contextName) {
+      const parent = $(el).closest('p, li, td, div').first();
+      const parentText = parent.text().trim().replace(/\s+/g, ' ');
+      if (parentText && parentText.length > 5 && parentText.length < 200) {
+        contextName = parentText.substring(0, 120);
+      }
+    }
+
+    // ── 2. 从上下文提取价格 ──
+    // 取该链接所在的上下文块（表格行、列表项、段落）的纯文本
+    const contextEl = $(el).closest('tr, li, p, div, article').first();
+    const contextText = contextEl.length ? contextEl.text() : '';
+
+    // 价格正则：匹配 $XX.XX/年月季 或 $XX.XX/yr/mo/quarterly
+    const pricePatterns = [
+      /\$(\d+\.\d{2})\s*\/\s*(?:年|yr|year|annually)/i,
+      /\$(\d+\.\d{2})\s*\/\s*(?:月|mo|month|monthly)/i,
+      /\$(\d+\.\d{2})\s*\/\s*(?:季|quarterly)/i,
+      /(?:年付|annually|annual)[\s:：]*\$(\d+\.\d{2})/i,
+      /\$(\d+\.\d{2})\s*(?:USD)?\s*(?:per\s+)?(?:year|annum)/i,
+      /\$(\d+\.\d{2})\s*(?:USD)?\s*(?:per\s+)?month/i,
+    ];
+    const periodMap = [
+      '年', '月', '季', '年', '年', '月',
+    ];
+
+    for (let i = 0; i < pricePatterns.length; i++) {
+      const pm = contextText.match(pricePatterns[i]);
+      if (pm) {
+        contextPrice = `$${pm[1]}/${periodMap[i]}`;
+        break;
+      }
+    }
+
+    // 兜底：直接抓最小的 $X.XX（特价通常最便宜）
+    if (!contextPrice) {
+      const allPrices = [...contextText.matchAll(/\$(\d+\.\d{2})/g)].map(m => parseFloat(m[1]));
+      if (allPrices.length > 0) {
+        const minPrice = Math.min(...allPrices);
+        contextPrice = `$${minPrice.toFixed(2)}`;
+      }
+    }
+
+    // ── 3. 优惠码检测 ──
+    const promoPatterns = [
+      /(?:coupon|promo\s*code|promocode|优惠码|折扣码)[:\s：]+([A-Z0-9_-]{3,30})/i,
+      /(?:use|apply|enter)\s+(?:code\s+)?["']?([A-Z0-9_-]{4,30})["']?/i,
+    ];
+    for (const pat of promoPatterns) {
+      const pm = contextText.match(pat);
+      if (pm) { promoCode = pm[1]; break; }
+    }
+    // 也检查 URL 参数中的优惠码
+    const href = $(el).attr('href') || '';
+    try {
+      const u = new URL(href);
+      const up = u.searchParams.get('promocode') || u.searchParams.get('promo');
+      if (up) promoCode = up;
+    } catch {}
+
+    return { contextName, contextPrice, promoCode };
+  }
+
+  // ── 开始遍历所有竞品源 ──
   for (const source of COMPETITOR_SOURCES) {
     try {
-      console.log(`[Discoverer]   辅助源: ${source.name}`);
+      console.log(`[Discoverer]   📡 辅助源: ${source.name}`);
       const html = await cloudscraper.get(source.url);
+      const $ = cheerio.load(html);
 
-      // 提取 WHMCS 格式链接: pid=XXX
-      const regex = /https?:\/\/(?:www\.)?([\w.-]+)[^\s"'<>]*pid=(\d+)/gi;
-      let m;
-      while ((m = regex.exec(html)) !== null) {
-        const matchedDomain = m[1];
-        const pid = m[2];
-        for (const [key, info] of Object.entries(domainMap)) {
-          if (matchedDomain.includes(key)) {
-            allPids.push({ pid, ...info });
-            break;
+      // 遍历页面中所有链接
+      $('a[href]').each((_, el) => {
+        const href = $(el).attr('href') || '';
+
+        // ── WHMCS 格式: pid=XXX ──
+        const pidMatch = href.match(/(?:https?:\/\/)?(?:www\.)?([\w.-]+)[^\s]*pid=(\d+)/i);
+        if (pidMatch) {
+          const matchedDomain = pidMatch[1];
+          const pid = pidMatch[2];
+          for (const [key, info] of Object.entries(domainMap)) {
+            if (matchedDomain.includes(key)) {
+              const dedup = `${info.provider}-${pid}`;
+              if (!seen.has(dedup)) {
+                seen.add(dedup);
+                const ctx = extractContext($, el);
+                allPids.push({ pid, ...info, ...ctx });
+              }
+              break;
+            }
           }
         }
-      }
 
-      // 提取 CloudCone 格式链接: app.cloudcone.com/vps/{id}/create
-      const ccRegex = /app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/gi;
-      let ccm;
-      while ((ccm = ccRegex.exec(html)) !== null) {
-        const ccId = ccm[1];
-        if (!allPids.some(p => p.provider === 'cloudcone' && p.pid === ccId)) {
-          allPids.push({
-            pid: ccId,
-            provider: 'cloudcone',
-            providerName: 'CloudCone',
-            domain: 'app.cloudcone.com',
-            isCloudCone: true,
-          });
+        // ── CloudCone 格式: app.cloudcone.com/vps/{id}/create ──
+        const ccMatch = href.match(/app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/i);
+        if (ccMatch) {
+          const ccId = ccMatch[1];
+          const dedup = `cloudcone-${ccId}`;
+          if (!seen.has(dedup)) {
+            seen.add(dedup);
+            const ctx = extractContext($, el);
+            allPids.push({
+              pid: ccId,
+              provider: 'cloudcone',
+              providerName: 'CloudCone',
+              domain: 'app.cloudcone.com',
+              isCloudCone: true,
+              ...ctx,
+            });
+          }
         }
-      }
+      });
+
+      console.log(`[Discoverer]     从 ${source.name} 提取到 ${[...seen].filter(k => !allPids.find(p => `${p.provider}-${p.pid}` !== k)).length || allPids.length} 条链接`);
     } catch (err) {
       console.log(`[Discoverer]   ⚠️ 辅助源失败 [${source.name}]: ${err.message}`);
     }
@@ -723,11 +836,14 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     }
   }
 
-  // ── 第二层：竞品库存站辅助补全 ──
-  console.log(`\n[Discoverer] 📡 辅助查漏补缺（竞品库存站）`);
+  // ── 第二层：竞品库存站+测评站智能提取 ──
+  console.log(`\n[Discoverer] 📡 辅助查漏补缺（竞品站+测评站 · 智能提取模式）`);
   const competitorPids = await extractFromCompetitorSites();
+  let autoLiveCount = 0; // 直接上架数
+  let pendingCount = 0;  // 待确认数
+
   for (const cp of competitorPids) {
-    // CloudCone 使用不同的 URL 格式
+    // ── CloudCone 分支 ──
     if (cp.isCloudCone) {
       const ccId = `cloudcone-auto-${cp.pid}`;
       const ccExists = catalogRef.some(c =>
@@ -735,9 +851,14 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         (c.provider === 'cloudcone' && c.checkUrl && c.checkUrl.includes(`/vps/${cp.pid}/`))
       );
       if (!ccExists) {
+        // 优先用上下文提取到的名称和价格
+        const name = cp.contextName || `CloudCone VPS #${cp.pid}`;
+        const price = cp.contextPrice || '价格待确认';
+        const isAutoLive = price !== '价格待确认';
+
         const newEntry = {
           id: ccId, provider: 'cloudcone', providerName: 'CloudCone',
-          name: `CloudCone VPS #${cp.pid}`, price: '价格待确认', promoCode: null,
+          name, price, promoCode: cp.promoCode || null,
           specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
           datacenters: ['待确认'], networkRoutes: ['普通线路'],
           outOfStockKeywords: ['sold out', 'Sold Out', 'unavailable'],
@@ -747,13 +868,15 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         };
         catalogRef.push(newEntry);
         totalNewCount++;
+        if (isAutoLive) autoLiveCount++; else pendingCount++;
         if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
-        newsByProvider['CloudCone'].push(cp.pid);
-        console.log(`[Discoverer]   🆕 竞品站补全: CloudCone ID=${cp.pid}`);
+        newsByProvider['CloudCone'].push({ pid: cp.pid, name, price, autoLive: isAutoLive });
+        console.log(`[Discoverer]   🆕 ${isAutoLive ? '✅ 直接上架' : '⏳ 待确认'}: CloudCone ID=${cp.pid} → ${name} ${price}`);
       }
       continue;
     }
 
+    // ── 通用 WHMCS 商家分支 ──
     const exists = catalogRef.some(c =>
       (c.provider === cp.provider && c.checkUrl && c.checkUrl.includes(`pid=${cp.pid}`)) ||
       c.id === `${cp.provider}-auto-${cp.pid}` ||
@@ -762,41 +885,53 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     );
 
     if (!exists) {
-      // 从 SCAN_SOURCES 中找对应的 affParam
       const src = SCAN_SOURCES.find(s => s.provider === cp.provider);
       const affParam = src ? src.affParam : '';
 
-      // 自动抓取产品页面获取真实名称和价格
+      // 先用上下文提取的信息；不够再用 puppeteer 抓详情页
+      let realName = cp.contextName;
+      let realPrice = cp.contextPrice;
+      let promoCode = cp.promoCode;
+
+      // 如果上下文没提到价格，尝试进产品页面抓一次
+      if (!realPrice) {
+        const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
+        console.log(`[Discoverer]     📝 上下文缺价格，进页面抓: PID=${cp.pid}`);
+        const details = await scrapeProductDetails(browser, productUrl);
+        await sleep(1500);
+        if (!realName) realName = details.name;
+        realPrice = details.price;
+        if (!promoCode && details.promoCode) promoCode = details.promoCode;
+      }
+
+      realName = realName || `${cp.providerName} 新品 (pid=${cp.pid})`;
+      realPrice = realPrice || '价格待确认';
+      const isAutoLive = realPrice !== '价格待确认';
+
       const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
-      console.log(`[Discoverer]     📝 抓取竞品站新品详情: PID=${cp.pid}`);
-      const details = await scrapeProductDetails(browser, productUrl);
-      await sleep(1500);
-
-      const realName = details.name || `${cp.providerName} 新品 (pid=${cp.pid})`;
-      const realPrice = details.price || '价格待确认';
-
       const newEntry = {
         id: `${cp.provider}-auto-${cp.pid}`,
         provider: cp.provider,
         providerName: cp.providerName,
         name: realName,
         price: realPrice,
-        promoCode: details.promoCode || null,
+        promoCode: promoCode || null,
         specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
         datacenters: ['待确认'],
         networkRoutes: ['待确认'],
         outOfStockKeywords: ['Out of Stock', 'out of stock'],
         checkUrl: productUrl,
         affUrl: affParam
-          ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}${details.promoCode ? '&promocode=' + details.promoCode : ''}`
+          ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}${promoCode ? '&promocode=' + promoCode : ''}`
           : productUrl,
         isSpecialOffer: true
       };
       catalogRef.push(newEntry);
       totalNewCount++;
+      if (isAutoLive) autoLiveCount++; else pendingCount++;
       if (!newsByProvider[cp.providerName]) newsByProvider[cp.providerName] = [];
-      newsByProvider[cp.providerName].push(cp.pid);
-      console.log(`[Discoverer]   🆕 竞品站补全: ${cp.providerName} PID=${cp.pid}`);
+      newsByProvider[cp.providerName].push({ pid: cp.pid, name: realName, price: realPrice, autoLive: isAutoLive });
+      console.log(`[Discoverer]   🆕 ${isAutoLive ? '✅ 直接上架' : '⏳ 待确认'}: ${cp.providerName} PID=${cp.pid} → ${realName} ${realPrice}`);
     }
   }
 
@@ -808,13 +943,23 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 
     if (bot && adminChatId) {
       let msg = `🕵️ <b>产品发现引擎报告</b>\n\n`;
-      msg += `本轮扫描完成，发现 <b>${totalNewCount}</b> 款新产品，已自动加入监控：\n\n`;
-      for (const [provName, pids] of Object.entries(newsByProvider)) {
-        msg += `📦 <b>${provName}</b>: ${pids.length} 款新品\n`;
-        msg += `   PID: ${pids.join(', ')}\n`;
-        msg += `   ⚠️ 请确认名称和价格\n\n`;
+      msg += `本轮发现 <b>${totalNewCount}</b> 款新品`;
+      if (autoLiveCount > 0) msg += `，其中 <b>${autoLiveCount}</b> 款已自动上架 🚀`;
+      if (pendingCount > 0) msg += `，<b>${pendingCount}</b> 款待确认 ⏳`;
+      msg += `\n\n`;
+      for (const [provName, items] of Object.entries(newsByProvider)) {
+        msg += `📦 <b>${provName}</b>: ${items.length} 款\n`;
+        for (const item of (Array.isArray(items) && typeof items[0] === 'object' ? items : [])) {
+          const icon = item.autoLive ? '✅' : '⏳';
+          msg += `   ${icon} ${item.name} — ${item.price}\n`;
+        }
+        // 兼容旧格式（纯 pid 数组，来自第一层 WHMCS 扫描）
+        if (Array.isArray(items) && items.length > 0 && typeof items[0] !== 'object') {
+          msg += `   PID: ${items.join(', ')}\n`;
+        }
+        msg += `\n`;
       }
-      msg += `登录网页后台编辑详细信息 →`;
+      if (pendingCount > 0) msg += `⚠️ 待确认产品请到后台补全信息`;
       bot.sendMessage(adminChatId, msg, { parse_mode: 'HTML' })
         .catch(e => console.error('[Discoverer] TG 通知失败:', e.message));
     }
