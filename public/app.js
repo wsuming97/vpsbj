@@ -4,9 +4,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const lastUpdateEl = document.getElementById('last-update');
   const btnRefresh = document.getElementById('btn-refresh');
   const filterTabsContainer = document.getElementById('filter-tabs');
+  const searchInput = document.getElementById('search-input');
   
   let currentData = [];
   let currentFilter = 'all';
+
+  // 监听搜索输入
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      renderCards();
+    });
+  }
 
   // Format date safely
   function formatTime(isoString) {
@@ -25,10 +33,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filter data
     let filtered = currentData;
+    
+    // Search filter
+    if (searchInput && searchInput.value) {
+      const qs = searchInput.value.toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const title = (p.name || '').toLowerCase();
+        const prov = (p.providerName || '').toLowerCase();
+        const dcs = (p.datacenters || []).join(' ').toLowerCase();
+        const routes = (p.networkRoutes || []).join(' ').toLowerCase();
+        const sp = p.specs || {};
+        const specsStr = Object.values(sp).join(' ').toLowerCase();
+        const price = (p.price || '').toLowerCase();
+        
+        return title.includes(qs) || prov.includes(qs) || dcs.includes(qs) || 
+               routes.includes(qs) || specsStr.includes(qs) || price.includes(qs);
+      });
+    }
+
     if (currentFilter === 'special') {
-      filtered = currentData.filter(p => p.isSpecialOffer === true);
+      filtered = filtered.filter(p => p.isSpecialOffer === true);
     } else if (currentFilter !== 'all') {
-      filtered = currentData.filter(p => p.provider === currentFilter);
+      filtered = filtered.filter(p => p.provider === currentFilter);
     }
       
     if (filtered.length === 0) {
@@ -45,7 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
         grouped[prov].push(p);
       });
 
-      const sortedProviders = Object.keys(grouped).sort();
+      // 商家优先级排序
+      const priority = ['DMIT', '搬瓦工', 'CloudCone', 'RackNerd', 'ColoCrossing', 'ZGO Cloud'];
+      const sortedProviders = Object.keys(grouped).sort((a, b) => {
+        const idxA = priority.indexOf(a);
+        const idxB = priority.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
 
       sortedProviders.forEach(providerName => {
         // 添加商家分组标题
@@ -69,10 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderSingleCard(product) {
     const clone = template.content.cloneNode(true);
-    
+
     clone.querySelector('.provider-badge').textContent = product.providerName;
     clone.querySelector('.product-name').textContent = product.name;
     clone.querySelector('.product-price').textContent = product.price;
+
+    const endpointSection = clone.querySelector('.test-endpoints');
+    const endpointBody = clone.querySelector('.test-endpoints-body');
 
     // Handle specs block
     clone.querySelector('.dc-val').textContent = (product.datacenters || []).join(', ');
@@ -120,11 +158,37 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup tools
     const speedtest = clone.querySelector('.test-link');
-    if (product.speedtestUrl) {
-      speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
+    const hasInlineEndpoints = Array.isArray(product.testEndpoints) && product.testEndpoints.length > 0;
+    renderEndpointSection(product, endpointSection, endpointBody);
+
+    if (hasInlineEndpoints) {
+      speedtest.style.display = 'none';
+    } else if (product.speedtestUrl) {
+      speedtest.href = '#';
+      speedtest.title = `打开 ${product.providerName} 测速节点`;
+      speedtest.textContent = '⚡ 打开测速节点';
+      speedtest.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(product.speedtestUrl, '_blank');
+      });
     } else {
+      speedtest.href = `speedtest.html?id=${encodeURIComponent(product.id)}`;
+      speedtest.title = '跳转至内置测速页';
+    }
+
+    if (!hasInlineEndpoints && !product.speedtestUrl) {
+      endpointSection.hidden = true;
+    }
+
+    if (hasInlineEndpoints && !product.speedtestUrl) {
       speedtest.style.display = 'none';
     }
+
+    if (!hasInlineEndpoints && !product.speedtestUrl) {
+      speedtest.style.display = 'none';
+    }
+
+    speedtest.rel = 'noopener noreferrer';
 
     // 显示优惠码提示
     if (product.promoCode) {
@@ -141,6 +205,108 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     grid.appendChild(clone);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function buildGroupedEndpoints(product) {
+    if (Array.isArray(product.testEndpoints) && product.testEndpoints.length > 0) {
+      const grouped = new Map();
+      product.testEndpoints.forEach((endpoint) => {
+        const key = endpoint.datacenter || endpoint.label || '默认节点';
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(endpoint);
+      });
+      return Array.from(grouped.entries()).map(([datacenter, endpoints]) => ({ datacenter, endpoints }));
+    }
+
+    if (product.speedtestUrl) {
+      return [{
+        datacenter: (product.datacenters && product.datacenters[0]) || '默认节点',
+        endpoints: [{
+          label: '测速节点',
+          datacenter: (product.datacenters && product.datacenters[0]) || '默认节点',
+          route: (product.networkRoutes && product.networkRoutes[0]) || '',
+          type: 'url',
+          value: product.speedtestUrl,
+          note: '兼容模式'
+        }]
+      }];
+    }
+
+    return [];
+  }
+
+  function renderEndpointSection(product, endpointSection, endpointBody) {
+    const groups = buildGroupedEndpoints(product);
+    if (groups.length === 0) {
+      endpointSection.hidden = true;
+      return;
+    }
+
+    endpointSection.hidden = false;
+    endpointBody.innerHTML = groups.map((group, groupIndex) => {
+      const items = group.endpoints.map((endpoint, endpointIndex) => {
+        const route = endpoint.route ? `<span class="endpoint-route">${escapeHtml(endpoint.route)}</span>` : '';
+        const note = endpoint.note ? `<span class="endpoint-note">${escapeHtml(endpoint.note)}</span>` : '';
+        const value = escapeHtml(endpoint.value);
+        const label = escapeHtml(endpoint.label || endpoint.route || endpoint.type || '节点');
+        const type = escapeHtml(endpoint.type || 'url');
+        return `
+          <button
+            type="button"
+            class="endpoint-chip"
+            data-type="${type}"
+            data-value="${value}"
+            data-label="${label}"
+          >
+            <span class="endpoint-chip-label">${label}</span>
+            ${route}
+            <span class="endpoint-chip-value">${value}</span>
+            ${note}
+          </button>
+        `;
+      }).join('');
+
+      return `
+        <div class="endpoint-group" data-group-index="${groupIndex}">
+          <div class="endpoint-group-title">${escapeHtml(group.datacenter)}</div>
+          <div class="endpoint-group-items">${items}</div>
+        </div>
+      `;
+    }).join('');
+
+    endpointBody.querySelectorAll('.endpoint-chip').forEach((chip) => {
+      chip.addEventListener('click', async () => {
+        const type = chip.dataset.type;
+        const value = chip.dataset.value;
+        const originalText = chip.querySelector('.endpoint-chip-value').textContent;
+
+        if (type === 'ip') {
+          try {
+            await navigator.clipboard.writeText(value);
+            chip.classList.add('copied');
+            chip.querySelector('.endpoint-chip-value').textContent = '已复制';
+            setTimeout(() => {
+              chip.classList.remove('copied');
+              chip.querySelector('.endpoint-chip-value').textContent = originalText;
+            }, 1500);
+          } catch {
+            window.prompt('请手动复制测试 IP', value);
+          }
+          return;
+        }
+
+        window.open(value, '_blank');
+      });
+    });
   }
 
   // Render filter tabs

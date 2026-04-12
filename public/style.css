@@ -6,15 +6,15 @@
   --text-muted: #64748b;
   --acc-blue: #2563eb;
   --acc-blue-hover: #1d4ed8;
-  
+
   --badge-in-stock: #059669;
   --badge-in-stock-bg: #d1fae5;
-  
+
   --badge-oos: #dc2626;
   --badge-oos-bg: #fee2e2;
-  
+
   --badge-err: #d97706;
-  
+
   --buy-gradient: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
   --buy-gradient-hover: linear-gradient(90deg, #ea580c 0%, #c2410c 100%);
 
@@ -22,11 +22,11 @@
   --tag-premium-bg: #fef08a;
   --tag-premium-color: #b45309;
   --tag-premium-border: #fde047;
-  
+
   --tag-normal-bg: #dcfce7;
   --tag-normal-color: #15803d;
   --tag-normal-border: #bbf7d0;
-  
+
   --tag-opt-bg: #dbeafe;
   --tag-opt-color: #1d4ed8;
   --tag-opt-border: #bfdbfe;
@@ -145,7 +145,8 @@ header {
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #2481cc; /* Telegram brand color */
+  background-color: #2481cc;
+  /* Telegram brand color */
   color: white;
   padding: 8px 16px;
   border-radius: 8px;
@@ -190,8 +191,15 @@ header {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .btn-refresh {
@@ -247,7 +255,8 @@ main {
 }
 
 .provider-group-badge {
-  background-color: #ef4444; /* match special tag */
+  background-color: #ef4444;
+  /* match special tag */
   color: #fff;
   padding: 2px 10px;
   border-radius: 9999px;
@@ -320,6 +329,103 @@ main {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.status-badge.checking {
+  color: var(--badge-err);
+  background-color: #fff7ed;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.test-endpoints {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--card-border);
+}
+
+.test-endpoints-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 10px;
+}
+
+.test-endpoints-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.endpoint-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.endpoint-group-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--acc-blue);
+}
+
+.endpoint-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.endpoint-chip {
+  border: 1px solid var(--card-border);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  cursor: pointer;
+  min-width: 160px;
+  transition: all 0.2s ease;
+}
+
+.endpoint-chip:hover {
+  border-color: var(--acc-blue);
+  background: #eff6ff;
+}
+
+.endpoint-chip.copied {
+  border-color: var(--badge-in-stock);
+  background: var(--badge-in-stock-bg);
+}
+
+.endpoint-chip-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.endpoint-route {
+  font-size: 0.72rem;
+  color: var(--acc-blue);
+}
+
+.endpoint-chip-value {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.endpoint-note {
+  font-size: 0.7rem;
+  color: #b45309;
+}
+
+.tool-link {
+  font-size: 0.86rem;
+}
+
+.review-link {
+  display: none;
+}
+
 /* Card Body */
 .card-title {
   margin-bottom: 12px;
@@ -359,11 +465,13 @@ main {
   color: var(--tag-premium-color);
   border-color: var(--tag-premium-border);
 }
+
 .tag-normal {
   background: var(--tag-normal-bg);
   color: var(--tag-normal-color);
   border-color: var(--tag-normal-border);
 }
+
 .tag-optimized {
   background: var(--tag-opt-bg);
   color: var(--tag-opt-color);
@@ -465,6 +573,7 @@ footer {
     align-items: flex-start;
     gap: 8px;
   }
+
   .btn-refresh {
     margin-left: 0;
     margin-top: 8px;
@@ -481,9 +590,17 @@ footer {
   font-weight: 600;
   animation: pulse-check 1.5s ease-in-out infinite;
 }
+
 @keyframes pulse-check {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* 优惠码提示 */
