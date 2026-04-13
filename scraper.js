@@ -128,8 +128,9 @@ export async function checkProductStock(product) {
           break;
         }
       }
-      // 需要邀请码的产品对外不可购买，等同缺货
-      if (inStock && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(html)) {
+      // 需要邀请码且该产品没有配置邀请码/优惠码 → 等同缺货
+      // 如果产品已配置了 promoCode（从竞品站或手动录入），则不拦截
+      if (inStock && !product.promoCode && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(html)) {
         inStock = false;
       }
     }

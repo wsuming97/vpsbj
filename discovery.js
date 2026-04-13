@@ -215,12 +215,10 @@ async function scrapeProductDetails(browser, url) {
         result.name = '⚠️非VPS产品自动拦截';
       }
 
-      // ── 检测邀请码限制产品：需要 invite code 的产品不对外公开销售 ──
+      // ── 检测邀请码限制产品 ──
+      // 仅标记 flag，不立刻判无效；后续如果提取到了邀请码/优惠码，仍可上架
       const invitePatterns = /invite\s*code\s*required|invitation\s*only|invite[\s-]*only|仅限邀请/i;
-      if (invitePatterns.test(allText)) {
-        result.isInvalid = true;
-        result.inviteRequired = true;
-      }
+      result.inviteRequired = invitePatterns.test(allText);
 
       // ── 检测优惠码输入框 ──
       // WHMCS 的优惠码输入框通常 name="promocode" 或 id="inputPromotionCode"
@@ -405,6 +403,15 @@ async function scrapeProductDetails(browser, url) {
 
     if (details.promoCode) {
       console.log(`[Discoverer]     🎫 检测到优惠码: ${details.promoCode}`);
+    }
+
+    // 需要邀请码但未找到任何邀请码/优惠码 → 不可公开购买，标记无效
+    // 如果找到了优惠码/邀请码 → 可以上架（带码销售）
+    if (info.inviteRequired && !details.promoCode) {
+      details.isInvalid = true;
+      console.log(`[Discoverer]     🔒 需要邀请码但未找到，标记为不可上架`);
+    } else if (info.inviteRequired && details.promoCode) {
+      console.log(`[Discoverer]     🔓 需要邀请码，已找到码 ${details.promoCode}，允许上架`);
     }
 
   } catch (err) {
