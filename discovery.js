@@ -76,7 +76,7 @@ const SCAN_SOURCES = [
     domain: 'my.racknerd.com',
     affParam: `aff=${AFF.rn}`,
     mode: 'pid-probe',
-    probeRange: 20, // RackNerd 活动频繁，探测范围大些
+    probeRange: 10, // RackNerd 活动频繁但产品多从竞品站发现，探测范围适度
     outOfStockKeywords: ['Out of Stock', 'out of stock'],
   },
 
@@ -107,7 +107,7 @@ const SCAN_SOURCES = [
     domain: 'cloud.colocrossing.com',
     affParam: `aff=${AFF.colo}`,
     mode: 'pid-probe',
-    probeRange: 20,
+    probeRange: 10,
     startPid: 10,     // 由于可能没有历史存量，提供一个安全起点，强制扫描
     outOfStockKeywords: ['Out of Stock', 'out of stock'],
   },
@@ -485,6 +485,12 @@ async function probePids(browser, source, catalogRef) {
   console.log(`[Discoverer]     PID 探测范围: ${maxPid + 1} ~ ${maxPid + source.probeRange}`);
 
   for (let pid = maxPid + 1; pid <= maxPid + source.probeRange; pid++) {
+    // 黑名单检查：已拉黑的 PID 直接跳过，不浪费浏览器资源
+    const candidateId = `${source.provider}-auto-${pid}`;
+    if (db.isIdPurged(candidateId)) {
+      console.log(`[Discoverer]     ⚫ PID=${pid} 已拉黑，跳过`);
+      continue;
+    }
     const page = await browser.newPage();
     try {
       const url = `https://${source.domain}/cart.php?a=add&pid=${pid}`;
