@@ -215,6 +215,13 @@ async function scrapeProductDetails(browser, url) {
         result.name = '⚠️非VPS产品自动拦截';
       }
 
+      // ── 检测邀请码限制产品：需要 invite code 的产品不对外公开销售 ──
+      const invitePatterns = /invite\s*code\s*required|invitation\s*only|invite[\s-]*only|仅限邀请/i;
+      if (invitePatterns.test(allText)) {
+        result.isInvalid = true;
+        result.inviteRequired = true;
+      }
+
       // ── 检测优惠码输入框 ──
       // WHMCS 的优惠码输入框通常 name="promocode" 或 id="inputPromotionCode"
       const promoInput = document.querySelector('input[name="promocode"]') ||

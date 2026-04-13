@@ -128,6 +128,10 @@ export async function checkProductStock(product) {
           break;
         }
       }
+      // 需要邀请码的产品对外不可购买，等同缺货
+      if (inStock && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(html)) {
+        inStock = false;
+      }
     }
 
     return { success: true, inStock, html };
