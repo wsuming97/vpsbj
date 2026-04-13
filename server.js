@@ -143,13 +143,34 @@ app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
-// 批量清理「待确认」产品（一键清空垃圾探测数据）
+// 批量清理「待确认」+ 垃圾产品（一键清空无效数据）
 app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   const allProducts = db.getAllProducts();
-  const pendingItems = allProducts.filter(p =>
-    (p.price === '待确认' || p.price === '价格待确认') &&
-    (p.name.includes('自动发现') || p.name.includes('新品'))
-  );
+  
+  // 垃圾产品判定规则：
+  // 1. 价格=待确认 且 名称含自动发现/新品
+  // 2. 名称含典型错误页面关键词（Oops / 404 / error / problem / Shopping Cart）
+  // 3. 名称含冗余爬取标签（Deploy Server / Order Link）
+  const junkPatterns = [
+    /oops/i, /there's a problem/i, /404/i, /not found/i,
+    /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
+    /just a moment/i, /checking your browser/i, /cloudflare/i,
+    /deploy server/i, /order link/i
+  ];
+  
+  const pendingItems = allProducts.filter(p => {
+    // 条件1：待确认 + 自动发现
+    const isPricePending = (p.price === '待确认' || p.price === '价格待确认');
+    const isAutoName = p.name.includes('自动发现') || p.name.includes('新品');
+    if (isPricePending && isAutoName) return true;
+    
+    // 条件2：名称命中垃圾模式
+    for (const pat of junkPatterns) {
+      if (pat.test(p.name)) return true;
+    }
+    
+    return false;
+  });
   
   let deleted = 0;
   for (const item of pendingItems) {
@@ -159,7 +180,27 @@ app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   
   if (deleted > 0) reloadCatalog();
   
-  console.log(`[Admin] 🧹 批量清理了 ${deleted} 个待确认产品`);
+  console.log(`[Admin] 🧹 批量清理了 ${deleted} 个垃圾/待确认产品`);
+  res.json({ success: true, deleted });
+});
+
+// 批量删除选中的产品（前端勾选后调用）
+app.post('/api/admin/batch-delete', requireAdmin, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ success: false, error: 'ids 为空' });
+  }
+  
+  let deleted = 0;
+  for (const id of ids) {
+    if (db.productExists(id)) {
+      db.deleteProduct(id);
+      deleted++;
+    }
+  }
+  
+  if (deleted > 0) reloadCatalog();
+  console.log(`[Admin] 🗑 批量删除了 ${deleted} 个产品`);
   res.json({ success: true, deleted });
 });
 

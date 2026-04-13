@@ -137,6 +137,24 @@
     /* Toast */
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px; opacity: 0; z-index: 2000; font-weight: 500; font-size: 0.9rem;  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; gap: 8px; }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* Checkbox */
+    .row-check { width: 18px; height: 18px; accent-color: var(--acc-blue); cursor: pointer; }
+    th .row-check { margin: 0; }
+    
+    /* Batch Action Bar */
+    .batch-bar { display: none; align-items: center; gap: 12px; padding: 12px 20px; margin-bottom: 16px; background: linear-gradient(135deg, #1e293b, #334155); border-radius: 12px; color: white; font-size: 0.875rem; animation: fadeInUp 0.2s ease; }
+    .batch-bar.show { display: flex; }
+    .batch-bar .batch-count { font-weight: 700; color: #fbbf24; }
+    .batch-bar .btn { font-size: 0.8rem; }
+    
+    /* Junk row highlight */
+    tr.junk-row td { background: #fef2f2 !important; }
+    tr.junk-row td:first-child { border-left: 3px solid #ef4444; }
+    
+    /* Filter: junk */
+    .filter-btn[data-filter="junk"] { color: #dc2626; }
+    .filter-btn[data-filter="junk"].active { background: #dc2626; color: white; border-color: #dc2626; }
   </style>
 </head>
 <body>
@@ -190,16 +208,25 @@
       <input class="search-input" id="search" placeholder="🔍 搜索产品名称、ID、商家..." oninput="filterTable()">
       <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">全部</button>
       <button class="filter-btn" data-filter="pending" onclick="setFilter(this)">⚠️ 待确认</button>
+      <button class="filter-btn" data-filter="junk" onclick="setFilter(this)">🗑 垃圾数据</button>
       <button class="filter-btn" data-filter="active" onclick="setFilter(this)">监控中</button>
       <button class="filter-btn" data-filter="hidden" onclick="setFilter(this)">已下架</button>
       <button class="btn btn-blue" onclick="loadData()">🔄 刷新</button>
-      <button class="btn btn-red" onclick="purgePending()" id="btn-purge" style="display:none;">🧹 清理待确认</button>
+      <button class="btn btn-red" onclick="purgePending()" id="btn-purge" style="display:none;">🧹 智能清理</button>
+    </div>
+
+    <!-- 批量操作栏 -->
+    <div class="batch-bar" id="batch-bar">
+      <span>已选中 <span class="batch-count" id="batch-count">0</span> 个产品</span>
+      <button class="btn btn-red btn-sm" onclick="batchDelete()">🗑 删除选中</button>
+      <button class="btn btn-gray btn-sm" onclick="clearSelection()">取消选择</button>
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
+            <th style="width:40px"><input type="checkbox" class="row-check" id="check-all" onchange="toggleAll(this)"></th>
             <th>商家</th>
             <th>产品名称 / 来源链接</th>
             <th>价格</th>
@@ -209,7 +236,7 @@
           </tr>
         </thead>
         <tbody id="catalog-body">
-          <tr><td colspan="6">加载中...</td></tr>
+          <tr><td colspan="7">加载中...</td></tr>
         </tbody>
       </table>
     </div>
@@ -278,6 +305,17 @@
     let currentFilter = 'all';
     let stockChartInstance = null;
     let historyChartInstance = null;
+    let selectedIds = new Set();
+
+    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页 或 冗余提取(Deploy Server)
+    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i, /deploy server/i, /order link/i];
+    function isJunk(item) {
+      for (const pat of junkPatterns) { if (pat.test(item.name)) return true; }
+      return false;
+    }
+    function isPending(item) {
+      return (item.price === '待确认' || item.price === '价格待确认' || item.name.includes('自动发现') || item.name.includes('新品 (pid='));
+    }
 
     function switchView(view) {
       document.getElementById('view-overview').style.display = view === 'overview' ? 'block' : 'none';
@@ -310,8 +348,9 @@
 
     function updateStats() {
       const activeCount = allData.filter(x => !x.isHidden).length;
-      const pendingCount = allData.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品')).length;
+      const pendingCount = allData.filter(x => isPending(x) || isJunk(x)).length;
       const hiddenCount = allData.filter(x => x.isHidden).length;
+      const junkCount = allData.filter(x => isJunk(x)).length;
 
       document.getElementById('stat-total').textContent = allData.length;
       document.getElementById('stat-active').textContent = activeCount;
@@ -376,9 +415,11 @@
       
       // Filter by status
       if (currentFilter === 'pending') {
-        filtered = filtered.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品'));
+        filtered = filtered.filter(x => isPending(x));
+      } else if (currentFilter === 'junk') {
+        filtered = filtered.filter(x => isJunk(x));
       } else if (currentFilter === 'active') {
-        filtered = filtered.filter(x => !x.isHidden);
+        filtered = filtered.filter(x => !x.isHidden && !isPending(x) && !isJunk(x));
       } else if (currentFilter === 'hidden') {
         filtered = filtered.filter(x => x.isHidden);
       }
@@ -399,17 +440,18 @@
     function renderTable(data) {
       const tbody = document.getElementById('catalog-body');
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:40px;">没有符合条件的产品</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:40px;">没有符合条件的产品</td></tr>';
         return;
       }
       
       tbody.innerHTML = data.map(item => {
-        const isPending = item.price === '待确认' || item.price === '价格待确认' || item.name.includes('自动发现') || item.name.includes('新品 (pid=');
+        const _isPending = isPending(item);
+        const _isJunk = isJunk(item);
         
         let statusBadge;
         if (item.isHidden) {
           statusBadge = '<span class="badge badge-hidden">已下架</span>';
-        } else if (isPending) {
+        } else if (_isPending || _isJunk) {
           statusBadge = '<span class="badge badge-pending">待确认</span>';
         } else {
           statusBadge = '<span class="badge badge-active">监控中</span>';
@@ -422,7 +464,11 @@
         const checkUrl = item.checkUrl || '';
         const promoHtml = item.promoCode ? `<span class="prod-promo">${item.promoCode}</span>` : '<span style="color:#475569">无</span>';
         
-        return `<tr>
+        const checkedStr = selectedIds.has(item.id) ? 'checked' : '';
+        const rowClass = _isJunk ? 'junk-row' : '';
+        
+        return `<tr class="${rowClass}">
+          <td><input type="checkbox" class="row-check item-check" value="${item.id}" onchange="toggleCheck(this)" ${checkedStr}></td>
           <td>${item.providerName || item.provider}</td>
           <td>
             <div class="prod-name">${item.name}</div>
@@ -442,6 +488,64 @@
           </td>
         </tr>`;
       }).join('');
+      
+      updateBatchBar();
+    }
+
+    function toggleCheck(checkbox) {
+      if (checkbox.checked) selectedIds.add(checkbox.value);
+      else selectedIds.delete(checkbox.value);
+      updateBatchBar();
+    }
+
+    function toggleAll(headerCheckbox) {
+      const checkboxes = document.querySelectorAll('.item-check');
+      checkboxes.forEach(cb => {
+        cb.checked = headerCheckbox.checked;
+        if (headerCheckbox.checked) selectedIds.add(cb.value);
+        else selectedIds.delete(cb.value);
+      });
+      updateBatchBar();
+    }
+
+    function clearSelection() {
+      selectedIds.clear();
+      document.getElementById('check-all').checked = false;
+      document.querySelectorAll('.item-check').forEach(cb => cb.checked = false);
+      updateBatchBar();
+    }
+
+    function updateBatchBar() {
+      const bar = document.getElementById('batch-bar');
+      const count = document.getElementById('batch-count');
+      if (selectedIds.size > 0) {
+        bar.classList.add('show');
+        count.textContent = selectedIds.size;
+      } else {
+        bar.classList.remove('show');
+      }
+    }
+
+    async function batchDelete() {
+      if (selectedIds.size === 0) return;
+      if (!confirm(`⚠️ 确定要彻底删除选中的 ${selectedIds.size} 个产品吗？此操作不可恢复！`)) return;
+      
+      try {
+        const res = await fetch('/api/admin/batch-delete', {
+          method: 'POST', 
+          headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`🗑 成功批量删除 ${json.deleted} 个产品`);
+          selectedIds.clear();
+          document.getElementById('check-all').checked = false;
+          loadData();
+        } else {
+          alert('批量删除失败: ' + json.error);
+        }
+      } catch (e) { alert('网络错误'); }
     }
 
     function openEdit(id) {
