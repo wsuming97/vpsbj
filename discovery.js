@@ -121,14 +121,12 @@ const SCAN_SOURCES = [
     mode: 'gid-scan',
     gids: [
       { gid: 1, label: 'Special Offers / Anniversary' },
-      { gid: 5, label: 'Singapore KVM' },
-      { gid: 11, label: 'Japan KVM' },
     ],
     extraUrls: [
       { url: 'https://greencloudvps.com/billing/promotions.php', label: '官方 Promotions' },
       { url: 'https://greencloudvps.com/billing/cart.php?gid=1', label: '特价与周年庆列表' },
-      { url: 'https://greencloudvps.com/billing/cart.php?gid=5', label: 'Singapore KVM' },
-      { url: 'https://greencloudvps.com/billing/cart.php?gid=11', label: 'Japan KVM' },
+      { url: 'https://greencloudvps.com/billing/store/cn-premium-optimized', label: 'CN Premium Optimized（中国优化线路）' },
+      { url: 'https://greencloudvps.com/billing/store/budget-kvm-sale', label: 'Budget KVM Sale（特价 KVM）' },
     ],
     outOfStockKeywords: ['Out of Stock', 'out of stock', 'Sold Out', 'sold out'],
   },
