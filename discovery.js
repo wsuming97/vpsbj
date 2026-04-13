@@ -206,8 +206,8 @@ async function scrapeProductDetails(browser, url) {
         if (t && t.length > 2 && t.length < 100) result.name = t;
       }
 
-      // ── 剔除明确不是 VPS 的无关产品 ──
-      const nonVpsPatterns = /Shared Hosting|cPanel|Reseller|Virtual Web Hosting|Dedicated Server|Domain Registration|Addon|Extra IP|SSL Certificate/i;
+      // ── 剔除明确不是 VPS 的无关产品和垃圾页面 ──
+      const nonVpsPatterns = /Shared Hosting|cPanel|Reseller|Virtual Web Hosting|Dedicated Server|Domain Registration|Addon|Extra IP|SSL Certificate|Shopping Cart|Oops|there.*problem|Cloud Virtual Private Servers|Web Hosting|Error|Page Not Found|404/i;
       if (result.name && nonVpsPatterns.test(result.name)) {
         result.isInvalid = true; // 强制标记为无效
         result.name = '⚠️非VPS产品自动拦截';
@@ -812,8 +812,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         const details = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
-        if (details.isInvalid || (details.name && (details.name.includes('Shopping Cart') || details.name.includes('404')))) {
-           console.log(`[Discoverer]     🚫 页面失效/缺货无法获取信息，跳过上架`);
+        // 统一垃圾页面检测：isInvalid 标记 + 名称关键词双重拦截
+        const junkNamePatterns = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
+        if (details.isInvalid || (details.name && junkNamePatterns.test(details.name))) {
+           console.log(`[Discoverer]     🚫 拦截垃圾页面: ${details.name || '无标题'}`);
            // 拉黑，避免下轮又试
            if (!db.isIdPurged(candidateId)) {
              db.purgeProduct(candidateId); // purge = 删除 + 拉黑，确认垃圾页面永不重新扫入
@@ -823,6 +825,15 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 
         const realName = details.name || `${source.providerName} 新品 (pid=${pid})`;
         const realPrice = details.price || '价格待确认';
+
+        // 最终名称垃圾兜底（防止 scrapeProductDetails 漏检）
+        const junkNameCheck1 = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
+        if (junkNameCheck1.test(realName)) {
+          console.log(`[Discoverer]     🚫 拦截垃圾名称: ${realName}`);
+          if (!db.isIdPurged(candidateId)) db.purgeProduct(candidateId);
+          continue;
+        }
+
         console.log(`[Discoverer]     → 名称: ${realName}, 价格: ${realPrice}`);
 
         const promoSuffix = details.promoCode ? `&promocode=${encodeURIComponent(details.promoCode)}` : '';
@@ -904,9 +915,10 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         scrapedDetails = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
-        if (scrapedDetails.isInvalid || (scrapedDetails.name && (scrapedDetails.name.includes('Shopping Cart') || scrapedDetails.name.includes('404')))) {
-           console.log(`[Discoverer]     🚫 无效页面/已下架，拉黑防止重复扫入`);
-           db.purgeProduct(candidateId); // purge = 删除 + 拉黑，确认垃圾页面永不重新扫入
+        const junkNamePatterns2 = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
+        if (scrapedDetails.isInvalid || (scrapedDetails.name && junkNamePatterns2.test(scrapedDetails.name))) {
+           console.log(`[Discoverer]     🚫 拦截垃圾页面: ${scrapedDetails.name || '无标题'}`);
+           db.purgeProduct(candidateId);
            continue;
         }
 
@@ -917,6 +929,15 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 
       realName = realName || `${cp.providerName} 新品 (pid=${cp.pid})`;
       realPrice = realPrice || '价格待确认';
+
+      // 最终名称垃圾检查（即使来自上下文也要过滤）
+      const junkFinalCheck = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
+      if (junkFinalCheck.test(realName)) {
+        console.log(`[Discoverer]     🚫 拦截垃圾名称: ${realName}`);
+        db.purgeProduct(candidateId);
+        continue;
+      }
+
       const isAutoLive = realPrice !== '价格待确认';
       const realCycles = (scrapedDetails && scrapedDetails.billingCycles) ? scrapedDetails.billingCycles : {};
 
