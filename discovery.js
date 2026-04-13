@@ -213,6 +213,13 @@ async function scrapeProductDetails(browser, url) {
         if (t && t.length > 2 && t.length < 100) result.name = t;
       }
 
+      // ── 剔除明确不是 VPS 的无关产品 ──
+      const nonVpsPatterns = /Shared Hosting|cPanel|Reseller|Virtual Web Hosting|Dedicated Server|Domain Registration|Addon|Extra IP|SSL Certificate/i;
+      if (result.name && nonVpsPatterns.test(result.name)) {
+        result.isInvalid = true; // 强制标记为无效
+        result.name = '⚠️非VPS产品自动拦截';
+      }
+
       // ── 检测优惠码输入框 ──
       // WHMCS 的优惠码输入框通常 name="promocode" 或 id="inputPromotionCode"
       const promoInput = document.querySelector('input[name="promocode"]') ||
