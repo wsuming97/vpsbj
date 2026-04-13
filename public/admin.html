@@ -307,14 +307,14 @@
     let historyChartInstance = null;
     let selectedIds = new Set();
 
-    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页
-    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i];
+    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页 等没有任何特征的占位名称
+    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i, /^Order Link$/i, /^Deploy Server$/i];
     function isJunk(item) {
       for (const pat of junkPatterns) { if (pat.test(item.name)) return true; }
       return false;
     }
     function isPending(item) {
-      return (item.price === '待确认' || item.price === '价格待确认' || item.name.includes('自动发现') || item.name.includes('新品 (pid='));
+      return (item.price === '待确认' || item.price === '价格待确认');
     }
 
     function switchView(view) {
@@ -647,7 +647,13 @@
     }
 
     async function purgePending() {
-      const pendingCount = allData.filter(x => (x.price === '待确认' || x.price === '价格待确认') && (x.name.includes('自动发现') || x.name.includes('新品'))).length;
+      const pendingCount = allData.filter(p => {
+        const isPricePending = (p.price === '待确认' || p.price === '价格待确认');
+        const isAutoName = p.name.includes('自动发现') || p.name.includes('新品');
+        // 如果价格已经手动改过（不再是待确认），绝不视为自动清理的垃圾
+        if (!isPricePending) return false;
+        return isAutoName || isJunk(p);
+      }).length;
       if (pendingCount === 0) { showToast('当前没有需要清理的待确认产品'); return; }
       if (!confirm('⚠️ 确定要一键清理 ' + pendingCount + ' 个"待确认"产品吗？\n\n这将删除所有由自动发现引擎探测到但无法获取价格的垃圾条目。\n已手动编辑过价格的产品不会被删除。')) return;
       try {
