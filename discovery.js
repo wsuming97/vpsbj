@@ -628,17 +628,26 @@ async function probePids(browser, source, catalogRef) {
       await sleep(3000);
 
       const html = await page.content();
-      // 如果页面返回了产品配置信息（而不是"Product not found"或空白页），说明这个 PID 存在
-      const isValidProduct = !html.includes('Product not found') &&
-                             !html.includes('Invalid') &&
-                             !html.includes('does not exist') &&
-                             (html.includes('Order Summary') || html.includes('Configure') ||
-                              html.includes('Annually') || html.includes('Monthly') ||
-                              html.includes('Out of Stock') || html.includes('Add to Cart'));
+      // 只有不是 Not found 并且是正常的商品页面才验证
+      const isNotInvalid = !html.includes('Product not found') &&
+                           !html.includes('Invalid') &&
+                           !html.includes('does not exist');
+
+      // 对于基于 WHMCS PID 的盲扫，必须包含一些 VPS/服务器 相关的典型特征词才能算作潜在的 VPS 新品，
+      // 否则可能会扫进几百个类似“虚拟主机”、“SSL证书”、“附加IP”等无关产品导致刷屏。
+      const hasVpsKeywords = html.match(/KVM|VPS|RAM|GB|Ryzen|Intel|Core|Xeon|E5|VDS|Dedicated|Bandwidth|Transfer|Port|Network|Uplink/i) !== null;
+      
+      const containsOrderKeywords = html.includes('Order Summary') || html.includes('Configure') || 
+                                    html.includes('Annually') || html.includes('Monthly') || 
+                                    html.includes('Out of Stock') || html.includes('Add to Cart');
+
+      const isValidProduct = isNotInvalid && hasVpsKeywords && containsOrderKeywords;
 
       if (isValidProduct) {
         pids.add(String(pid));
-        console.log(`[Discoverer]     ✅ PID=${pid} 存在！`);
+        console.log(`[Discoverer]     ✅ PID=${pid} 存在且疑似 VPS！`);
+      } else if (isNotInvalid && containsOrderKeywords) {
+        console.log(`[Discoverer]     ⏭️ PID=${pid} 存在，但未检测到VPS特征词，跳过以免误增无关商品`);
       }
     } catch (err) {
       // 超时或网络错误，跳过
