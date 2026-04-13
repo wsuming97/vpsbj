@@ -149,12 +149,12 @@ app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   
   // 垃圾产品判定规则：
   // 1. 价格=待确认 且 名称含自动发现/新品
-  // 2. 名称含典型错误页面关键词（Oops / 404 / error / problem / Shopping Cart / Order Link / Deploy Server）
+  // 2. 名称含典型错误页面关键词（Oops / 404 / error / problem / Shopping Cart ）
   // 3. 名称 = provider名称重复（如 "RackNerd 自动发现 (pid=XXX)"）
   const junkPatterns = [
-    /oops/i, /there's a problem/i, /404/i, /not found/i,
+    /oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i,
     /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
-    /just a moment/i, /checking your browser/i, /cloudflare/i, /^Order Link$/i, /^Deploy Server$/i
+    /just a moment/i, /checking your browser/i, /cloudflare/i
   ];
   
   const pendingItems = allProducts.filter(p => {

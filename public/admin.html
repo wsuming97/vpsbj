@@ -307,8 +307,8 @@
     let historyChartInstance = null;
     let selectedIds = new Set();
 
-    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页 等没有任何特征的占位名称
-    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i, /^Order Link$/i, /^Deploy Server$/i];
+    // 垃圾数据检测：名称含错误页关键词 等没有任何特征的占位名称
+    const junkPatterns = [/oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i, /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i];
     function isJunk(item) {
       for (const pat of junkPatterns) { if (pat.test(item.name)) return true; }
       return false;
@@ -531,6 +531,7 @@
           : `<button class="btn btn-red btn-sm" onclick="toggleProduct('${item.id}')">下架</button>`;
         
         const checkUrl = item.checkUrl || '';
+        const affUrl = item.affUrl || checkUrl;
         const promoHtml = item.promoCode ? `<span class="prod-promo">${item.promoCode}</span>` : '<span style="color:#475569">无</span>';
         
         const checkedStr = selectedIds.has(item.id) ? 'checked' : '';
@@ -542,7 +543,7 @@
           <td>
             <div class="prod-name">${item.name}</div>
             <div class="prod-id">${item.id}</div>
-            ${checkUrl ? `<a class="prod-link" href="${checkUrl}" target="_blank">🔗 ${checkUrl.substring(0, 60)}...</a>` : ''}
+            ${affUrl ? `<a class="prod-link" href="${affUrl}" target="_blank" title="${affUrl}">🔗 测试下单链接 (带返利)</a>` : ''}
           </td>
           <td><span class="prod-price">${item.price || '?'}</span></td>
           <td>${promoHtml}</td>
