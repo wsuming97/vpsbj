@@ -126,8 +126,30 @@ function requireAdmin(req, res, next) {
   }
 }
 
+// ── 垃圾/待确认判定逻辑（唯一 truth source，前端直接读后端字段） ──
+const JUNK_PATTERNS = [
+  /oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i,
+  /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
+  /just a moment/i, /checking your browser/i, /cloudflare/i,
+  /shared hosting/i, /cpanel/i, /reseller/i, /dedicated server/i,
+  /virtual web hosting/i, /ssl certificate/i
+];
+function isJunkProduct(p) {
+  return JUNK_PATTERNS.some(pat => pat.test(p.name));
+}
+function isPendingProduct(p) {
+  if (isJunkProduct(p)) return false;
+  return (p.price === '待确认' || p.price === '价格待确认');
+}
+
 app.get('/api/admin/catalog', requireAdmin, (req, res) => {
-  res.json({ success: true, data: catalog });
+  // 附加分类字段，前端直接使用，不再维护独立正则
+  const tagged = catalog.map(p => ({
+    ...p,
+    _isJunk: isJunkProduct(p),
+    _isPending: isPendingProduct(p),
+  }));
+  res.json({ success: true, data: tagged });
 });
 
 app.post('/api/admin/catalog/:id/toggle', requireAdmin, (req, res) => {
@@ -193,32 +215,12 @@ app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
 app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   const allProducts = db.getAllProducts();
   
-  // 垃圾产品判定规则：
-  // 1. 价格=待确认 且 名称含自动发现/新品
-  // 2. 名称含典型错误页面关键词（Oops / 404 / error / problem / Shopping Cart ）
-  // 3. 名称 = provider名称重复（如 "RackNerd 自动发现 (pid=XXX)"）
-  const junkPatterns = [
-    /oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i,
-    /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
-    /just a moment/i, /checking your browser/i, /cloudflare/i,
-    /shared hosting/i, /cpanel/i, /reseller/i, /dedicated server/i,
-    /virtual web hosting/i, /ssl certificate/i
-  ];
-  
+  // 复用模块级 isJunkProduct / isPendingProduct 判定逻辑
   const pendingItems = allProducts.filter(p => {
-    // 条件1：名称命中垃圾模式 (最高优先级删除，无视价格状态，只要含有明确的报错文案或无关虚拟主机文案)
-    for (const pat of junkPatterns) {
-      if (pat.test(p.name)) return true;
-    }
-
-    const isPricePending = (p.price === '待确认' || p.price === '价格待确认');
-    if (!isPricePending) return false; // 如果价格已被手动修改，且不是垃圾名称，则绝不视为异常删除
-    
-    // 条件2：价格待确认 + 名称含"自动发现"/"新品"
-    const isAutoName = p.name.includes('自动发现') || p.name.includes('新品');
-    if (isAutoName) return true;
-    
-    return false;
+    if (isJunkProduct(p)) return true;
+    if (!isPendingProduct(p)) return false;
+    // 待确认 + 名称含"自动发现"/"新品" 才清理
+    return p.name.includes('自动发现') || p.name.includes('新品');
   });
   
   let deleted = 0;

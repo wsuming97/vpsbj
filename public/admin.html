@@ -308,16 +308,9 @@
     let historyChartInstance = null;
     let selectedIds = new Set();
 
-    // 垃圾数据检测：名称含错误页关键词 等没有任何特征的占位名称
-    const junkPatterns = [/oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i, /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i];
-    function isJunk(item) {
-      for (const pat of junkPatterns) { if (pat.test(item.name)) return true; }
-      return false;
-    }
-    function isPending(item) {
-      if (isJunk(item)) return false;
-      return (item.price === '待确认' || item.price === '价格待确认');
-    }
+    // 垃圾/待确认判定：直接读后端标注的 _isJunk / _isPending 字段（唯一 truth source 在 server.js）
+    function isJunk(item) { return item._isJunk === true; }
+    function isPending(item) { return item._isPending === true; }
 
     function switchView(view) {
       document.getElementById('view-overview').style.display = view === 'overview' ? 'block' : 'none';
