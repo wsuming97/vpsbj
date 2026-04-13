@@ -1136,7 +1136,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   if (pendingItems.length > 0) {
     console.log(`\n[Discoverer] 🔄 自动重试补全 ${pendingItems.length} 个「待确认」产品`);
     let retryFixed = 0;
-    const maxRetry = 15;
+    const maxRetry = 60; // 提升了单次补全上限，以更快处理积压产品
     for (const item of pendingItems.slice(0, maxRetry)) {
       if (!item.checkUrl) continue;
       // locked 产品的静态字段受保护，跳过名称/价格覆盖（库存检测不受影响）

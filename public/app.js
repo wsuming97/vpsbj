@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    let cardIndex = 0;
+
     if (currentFilter === 'special') {
       // 在“特价VPS”下按商家分组显示
       const grouped = {};
@@ -133,21 +135,60 @@ document.addEventListener('DOMContentLoaded', () => {
         header.innerHTML = `<span class="provider-group-badge">${grouped[providerName].length}</span> ${providerName} 特价专区`;
         grid.appendChild(header);
 
-        // 渲染该商家下的卡片
-        grouped[providerName].forEach(product => {
-          renderSingleCard(product);
+        // 按活动名称正则提取二级分组
+        const eventGrouped = {};
+        grouped[providerName].forEach(p => {
+          // 匹配任何全角或半角括号里的内容
+          const match = p.name.match(/[(（]([^)）]+)[)）]/g);
+          let eventName = '常规特惠';
+          if (match && match.length > 0) {
+            eventName = match[match.length - 1].replace(/[()（）]/g, '').trim();
+          }
+          if (!eventGrouped[eventName]) eventGrouped[eventName] = [];
+          eventGrouped[eventName].push(p);
+        });
+
+        // 排序：有明确活动的排前，"常规特惠" 沉底
+        const eventNames = Object.keys(eventGrouped).sort((a,b) => {
+          if (a === '常规特惠') return 1;
+          if (b === '常规特惠') return -1;
+          return a.localeCompare(b);
+        });
+
+        eventNames.forEach(evt => {
+          // 渲染二级分类标题（如果全是常规特惠，则不渲染以保持简洁）
+          if (eventNames.length > 1 || evt !== '常规特惠') {
+            const subHeader = document.createElement('div');
+            subHeader.className = 'event-group-subheader';
+            subHeader.style.cssText = 'grid-column: 1 / -1; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); margin-top: 12px; margin-bottom: -4px; padding-left: 8px; border-left: 3px solid var(--acc-blue); display: flex; align-items: center; gap: 8px; line-height: 1.2;';
+            subHeader.innerHTML = `🏷️ ${evt} <span style="font-size:0.8rem; font-weight:normal; opacity:0.8;">(${eventGrouped[evt].length})</span>`;
+            grid.appendChild(subHeader);
+          }
+          
+          // 渲染卡片
+          eventGrouped[evt].forEach(product => {
+            renderSingleCard(product, cardIndex++);
+          });
         });
       });
     } else {
       // 其他标签页正常直接显示
       filtered.forEach(product => {
-        renderSingleCard(product);
+        renderSingleCard(product, cardIndex++);
       });
     }
   }
 
-  function renderSingleCard(product) {
+  function renderSingleCard(product, index = 0) {
     const clone = template.content.cloneNode(true);
+    
+    // 给第一层 DOM 添加 delay
+    const firstElement = clone.firstElementChild;
+    if (firstElement) {
+      // 每张卡片延迟递增 50ms (最大 1s 封顶)
+      const delay = Math.min(index * 50, 1000);
+      firstElement.style.animationDelay = `${delay}ms`;
+    }
     
     clone.querySelector('.provider-badge').textContent = product.providerName;
     clone.querySelector('.product-name').textContent = product.name;

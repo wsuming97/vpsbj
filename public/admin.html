@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VPS 监控管理后台</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -45,7 +46,33 @@
     .stat-item { background: var(--card-bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--card-border); display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
     .stat-num { font-weight: 700; color: var(--text-main); font-size: 1rem; }
     
-    /* Toolbar */
+    /* Main Top Tabs */
+    .top-tabs { display: flex; gap: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 0px; }
+    .top-tab { padding: 12px 24px; font-size: 1rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .top-tab:hover { color: var(--text-main); }
+    .top-tab.active { color: var(--acc-blue); border-bottom-color: var(--acc-blue); }
+
+    /* Dashboard Layout */
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px; }
+    .dash-card { background: var(--card-bg); border-radius: 16px; border: 1px solid var(--card-border); padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
+    .dash-card h3 { font-size: 1.1rem; margin-bottom: 16px; color: var(--text-main); border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+    .timeline { max-height: 400px; overflow-y: auto; padding-right: 8px; }
+    .tl-item { display: flex; gap: 12px; margin-bottom: 16px; position: relative; }
+    .tl-item::before { content: ''; position: absolute; left: 5px; top: 20px; bottom: -20px; width: 2px; background: #e2e8f0; }
+    .tl-item:last-child::before { display: none; }
+    .tl-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--card-border); flex-shrink: 0; margin-top: 4px; z-index: 1; border: 2px solid #fff; }
+    .tl-dot.restock { background: #10b981; }
+    .tl-dot.oos { background: #ef4444; }
+    .tl-content { flex: 1; font-size: 0.875rem; }
+    .tl-time { font-size: 0.75rem; color: #94a3b8; display: block; margin-top: 2px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .admin-header { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* Toolbar for Table */
     .toolbar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; background: var(--card-bg); padding: 16px; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border: 1px solid var(--card-border); }
     .search-input { flex: 1; min-width: 250px; padding: 10px 16px; background: #f8fafc; border: 1px solid var(--card-border); border-radius: 10px; color: var(--text-main); font-size: 0.875rem; outline: none; transition: border 0.2s; }
     .search-input:focus { border-color: var(--acc-blue); background: #fff; }
@@ -132,7 +159,33 @@
         <span class="stat-item">已下架 <span class="stat-num" id="stat-hidden">0</span></span>
       </div>
     </div>
-    
+
+    <div class="top-tabs">
+      <div class="top-tab active" id="tab-overview" onclick="switchView('overview')">📊 数据大盘</div>
+      <div class="top-tab" id="tab-products" onclick="switchView('products')">📦 商品管理</div>
+    </div>
+
+    <!-- 大盘视图 -->
+    <div id="view-overview" style="display: block;">
+      <div class="dashboard-grid">
+        <div class="dash-card" style="display:flex; flex-direction:column; align-items:center;">
+          <h3 style="width:100%">商品状态分布</h3>
+          <div style="width: 250px; height: 250px; position:relative;">
+             <canvas id="stockChart"></canvas>
+          </div>
+        </div>
+        <div class="dash-card">
+          <h3>最近监控动态前线 <button class="btn btn-gray btn-sm" style="float:right;" onclick="loadEvents()">刷新</button></h3>
+          <div class="timeline" id="event-timeline">
+            <!-- 骨架或空状态 -->
+            <div style="color:var(--text-muted); padding: 20px;">读取中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 商品管理视图 -->
+    <div id="view-products" style="display: none;">
     <div class="toolbar">
       <input class="search-input" id="search" placeholder="🔍 搜索产品名称、ID、商家..." oninput="filterTable()">
       <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">全部</button>
@@ -159,6 +212,7 @@
         </tbody>
       </table>
     </div>
+    </div> <!-- end view-products -->
   </div>
 
   <!-- Edit Modal -->
@@ -202,12 +256,34 @@
     </div>
   </div>
 
+  <!-- History Modal -->
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal" style="width: 700px;">
+      <h3 id="history-title">📈 历史趋势</h3>
+      <div style="width: 100%; height: 300px; position: relative;">
+        <canvas id="historyChart"></canvas>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-blue" onclick="closeHistoryModal()">完成</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
 
   <script>
     let token = '';
     let allData = [];
     let currentFilter = 'all';
+    let stockChartInstance = null;
+    let historyChartInstance = null;
+
+    function switchView(view) {
+      document.getElementById('view-overview').style.display = view === 'overview' ? 'block' : 'none';
+      document.getElementById('view-products').style.display = view === 'products' ? 'block' : 'none';
+      document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + view).classList.add('active');
+    }
 
     function login() {
       token = document.getElementById('admin-pwd').value;
@@ -227,14 +303,59 @@
         allData = json.data;
         updateStats();
         filterTable();
+        loadEvents();
       } catch (err) { console.error(err); }
     }
 
     function updateStats() {
+      const activeCount = allData.filter(x => !x.isHidden).length;
+      const pendingCount = allData.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品')).length;
+      const hiddenCount = allData.filter(x => x.isHidden).length;
+
       document.getElementById('stat-total').textContent = allData.length;
-      document.getElementById('stat-active').textContent = allData.filter(x => !x.isHidden).length;
-      document.getElementById('stat-pending').textContent = allData.filter(x => x.price === '待确认' || x.price === '价格待确认' || x.name.includes('自动发现') || x.name.includes('新品')).length;
-      document.getElementById('stat-hidden').textContent = allData.filter(x => x.isHidden).length;
+      document.getElementById('stat-active').textContent = activeCount;
+      document.getElementById('stat-pending').textContent = pendingCount;
+      document.getElementById('stat-hidden').textContent = hiddenCount;
+
+      // Update Chart
+      const ctx = document.getElementById('stockChart').getContext('2d');
+      if (stockChartInstance) stockChartInstance.destroy();
+      stockChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['监控中', '待确认', '已下架'],
+          datasets: [{
+            data: [activeCount, pendingCount, hiddenCount],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    async function loadEvents() {
+      try {
+        const res = await fetch('/api/vps/events?limit=20');
+        const json = await res.json();
+        const tl = document.getElementById('event-timeline');
+        if (json.success && json.data.length > 0) {
+          tl.innerHTML = json.data.map(ev => {
+            const isRestock = ev.event_type.includes('restock');
+            const colorClass = isRestock ? 'restock' : 'oos';
+            const textMsg = isRestock ? `补货 (${ev.price_at_event || ''})` : '缺货';
+            return `<div class="tl-item">
+              <div class="tl-dot ${colorClass}"></div>
+              <div class="tl-content">
+                <strong>[${ev.provider_name}]</strong> ${ev.product_name} <span style="color:${isRestock ? '#10b981' : '#ef4444'}">${textMsg}</span>
+                <span class="tl-time">${new Date(ev.occurred_at).toLocaleString('zh-CN')}</span>
+              </div>
+            </div>`;
+          }).join('');
+        } else {
+          tl.innerHTML = '<div style="color:var(--text-muted); padding: 20px;">暂无近期动态</div>';
+        }
+      } catch(e) { }
     }
 
     function setFilter(btn) {
@@ -308,7 +429,8 @@
           <td>${statusBadge}</td>
           <td>
             <div class="action-btns">
-              <button class="btn btn-blue btn-sm" onclick="openEdit('${item.id}')">✏️</button>
+              <button class="btn btn-blue btn-sm" onclick="openEdit('${item.id}')" title="编辑">✏️</button>
+              <button class="btn btn-gray btn-sm" onclick="openHistoryModal('${item.id}')" title="历史趋势">📈</button>
               ${toggleBtn}
               <button class="btn btn-gray btn-sm" onclick="deleteProduct('${item.id}')" title="删除">🗑</button>
             </div>
@@ -411,9 +533,64 @@
       setTimeout(() => { t.classList.remove('show'); }, 2500);
     }
 
+    async function openHistoryModal(id) {
+       const item = allData.find(x => x.id === id);
+       if (!item) return;
+       document.getElementById('history-title').textContent = `📈 ${item.providerName} - 历史趋势`;
+       document.getElementById('history-modal').classList.add('show');
+       
+       try {
+         const res = await fetch(`/api/vps/stock/${encodeURIComponent(id)}/history`);
+         const json = await res.json();
+         if (!json.success) return alert('读取历史记录失败');
+         
+         const priceData = json.data.priceHistory.reverse(); // 从老到新
+
+         const ctx = document.getElementById('historyChart').getContext('2d');
+         if (historyChartInstance) historyChartInstance.destroy();
+         
+         if (priceData.length === 0 && json.data.stockEvents.length === 0) {
+           // 空状态随便渲染一个 null 表
+           historyChartInstance = new Chart(ctx, { type: 'line', data: { labels: ['无数据'], datasets: [] }, options: { responsive: true, maintainAspectRatio: false } });
+           return;
+         }
+
+         historyChartInstance = new Chart(ctx, {
+           type: 'line',
+           data: {
+             labels: priceData.map(d => new Date(d.changed_at).toLocaleDateString()),
+             datasets: [{
+               label: '记录变动价格',
+               data: priceData.map(d => {
+                 // 尝试提取数字
+                 const m = d.new_price.match(/\$(\d+(\.\d+)?)/);
+                 return m ? parseFloat(m[1]) : 0;
+               }),
+               borderColor: '#3b82f6',
+               backgroundColor: 'rgba(59, 130, 246, 0.1)',
+               fill: true,
+               tension: 0.1
+             }]
+           },
+           options: {
+             responsive: true,
+             maintainAspectRatio: false,
+             scales: { y: { beginAtZero: false } }
+           }
+         });
+       } catch (e) { console.error('fetch history failed', e); }
+    }
+
+    function closeHistoryModal() {
+       document.getElementById('history-modal').classList.remove('show');
+    }
+
     // Click outside modal to close
     document.getElementById('edit-modal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeModal();
+    });
+    document.getElementById('history-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeHistoryModal();
     });
   </script>
 </body>

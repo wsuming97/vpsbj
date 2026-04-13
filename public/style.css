@@ -264,12 +264,25 @@ main {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+  animation: fadeInUp 0.5s ease-out forwards;
+  opacity: 0; /* will be animated to 1 */
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .product-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.12);
   border-color: #cbd5e1;
 }
 
@@ -472,19 +485,20 @@ main {
   font-weight: 600;
   color: var(--text-muted) !important;
   background: var(--card-border);
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .btn-buy.active {
   color: #fff !important;
   background: var(--buy-gradient);
-  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+  box-shadow: 0 4px 14px 0 rgba(234, 88, 12, 0.4); /* modified shadow to match gradient */
 }
 
 .btn-buy.active:hover {
   background: var(--buy-gradient-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 18px 0 rgba(234, 88, 12, 0.5);
 }
 
 .card-links {
