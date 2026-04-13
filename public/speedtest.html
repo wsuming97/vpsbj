@@ -492,12 +492,112 @@
         document.getElementById('product-summary').style.display = 'block';
         document.getElementById('test-endpoints').style.display = 'block';
         renderProductMeta(product);
+
+        // ── DMIT Looking Glass 数据自动注入 ──
+        if (product.provider === 'dmit' && (!product.testEndpoints || product.testEndpoints.length === 0)) {
+          product.testEndpoints = getDmitLgEndpoints(product);
+        }
+
         renderEndpoints(product);
       } catch (err) {
         const errorEl = document.getElementById('page-error');
         errorEl.style.display = 'block';
         errorEl.textContent = `商品加载失败：${err.message}`;
       }
+    }
+
+    // ── DMIT Looking Glass 全节点数据 ──
+    const DMIT_LG_NODES = [
+      { id: 'lax-pro', location: 'Los Angeles, CA, US', facility: 'West 7 Center', profile: 'Pro', route: 'CN2 GIA',
+        ipv4: '154.17.30.96', ipv6: '2605:52c0:2:d96::' },
+      { id: 'lax-eb', location: 'Los Angeles, CA, US', facility: 'West 7 Center', profile: 'Eyeball', route: '9929+CMIN2',
+        ipv4: '154.17.229.24', ipv6: '2605:52c0:1:5ab::' },
+      { id: 'lax-t1', location: 'Los Angeles, CA, US', facility: 'West 7 Center', profile: 'Tier 1', route: '国际线路',
+        ipv4: '174.136.204.135', ipv6: '2605:52c0:3:86::' },
+      { id: 'hkg-pro', location: 'Hong Kong', facility: 'Equinix HK2', profile: 'Pro', route: 'CN2 GIA',
+        ipv4: '103.117.100.199', ipv6: '2403:18c0:4:118::' },
+      { id: 'hkg-eb', location: 'Hong Kong', facility: 'Equinix HK2', profile: 'Eyeball', route: '9929',
+        ipv4: '154.12.188.3', ipv6: '2403:18c0:3:c::' },
+      { id: 'hkg-t1', location: 'Hong Kong', facility: 'Equinix HK2', profile: 'Tier 1', route: '国际线路',
+        ipv4: '154.12.176.28', ipv6: '2403:18c0:5:1fa::' },
+      { id: 'tyo-pro', location: 'Tokyo, JP', facility: 'Equinix TY8', profile: 'Pro', route: 'CN2 GIA/CU PREMIUM/CMI',
+        ipv4: '154.12.190.32', ipv6: '2403:18c0:1001::' },
+      { id: 'tyo-eb', location: 'Tokyo, JP', facility: 'Equinix TY8', profile: 'Eyeball', route: 'IIJ/Softbank',
+        ipv4: '154.31.118.26', ipv6: '2403:18c0:1002::' },
+      { id: 'tyo-t1', location: 'Tokyo, JP', facility: 'Equinix TY8', profile: 'Tier 1', route: '国际线路',
+        ipv4: '154.12.185.39', ipv6: '2403:18c0:1003::' },
+    ];
+
+    /**
+     * 根据 DMIT 产品信息匹配对应 LG 节点
+     * 优先匹配产品名称/线路中的关键词，没有匹配则返回全部节点供参考
+     */
+    function getDmitLgEndpoints(product) {
+      const name = (product.name || '').toLowerCase();
+      const routes = (product.networkRoutes || []).join(' ').toLowerCase();
+      const dcs = (product.datacenters || []).join(' ').toLowerCase();
+      const allText = name + ' ' + routes + ' ' + dcs;
+
+      // 按关键词筛选相关节点
+      let matched = DMIT_LG_NODES.filter(node => {
+        const nid = node.id.toLowerCase();
+        const nprofile = node.profile.toLowerCase();
+        // 匹配地区
+        if (allText.includes('lax') || allText.includes('los angeles')) return nid.startsWith('lax');
+        if (allText.includes('hkg') || allText.includes('hong kong') || allText.includes('香港')) return nid.startsWith('hkg');
+        if (allText.includes('tyo') || allText.includes('tokyo') || allText.includes('东京') || allText.includes('日本')) return nid.startsWith('tyo');
+        return false;
+      });
+
+      // 如果地区匹配后还能按线路精确匹配
+      if (matched.length > 1) {
+        const profileMatch = matched.filter(node => {
+          const p = node.profile.toLowerCase();
+          if (allText.includes('premium') || allText.includes('pro') || allText.includes('gia')) return p === 'pro';
+          if (allText.includes('eyeball') || allText.includes('9929') || allText.includes('cmin2')) return p === 'eyeball';
+          if (allText.includes('tier') || allText.includes('standard')) return p === 'tier 1';
+          return false;
+        });
+        if (profileMatch.length > 0) matched = profileMatch;
+      }
+
+      // 没匹配到任何地区 → 返回全部节点供参考
+      if (matched.length === 0) matched = DMIT_LG_NODES;
+
+      // 转为 testEndpoints 格式
+      const endpoints = [];
+      matched.forEach(node => {
+        const dcLabel = `${node.location} · ${node.facility}`;
+        // IPv4 节点
+        endpoints.push({
+          datacenter: dcLabel,
+          label: `${node.profile} — IPv4`,
+          route: node.route,
+          type: 'ip',
+          value: node.ipv4,
+          note: `测速文件: https://${node.id}-v4.lg.dmit.sh/100MB.bin`
+        });
+        // IPv6 节点
+        endpoints.push({
+          datacenter: dcLabel,
+          label: `${node.profile} — IPv6`,
+          route: node.route,
+          type: 'ip',
+          value: node.ipv6,
+          note: `测速文件: https://${node.id}-v6.lg.dmit.sh/100MB.bin`
+        });
+      });
+
+      // 追加 LG 链接
+      endpoints.push({
+        datacenter: 'DMIT Looking Glass',
+        label: '官方 Looking Glass 面板',
+        route: '全部节点',
+        type: 'lg',
+        value: 'https://lg.dmit.sh'
+      });
+
+      return endpoints;
     }
 
     document.getElementById('btn-start').addEventListener('click', function() {
