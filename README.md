@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- 🔍 **实时库存监控** — 每分钟检测所有商品库存状态
+- 🔍 **实时库存监控** — 每 5 分钟执行一轮库存检测，单轮内按并发队列逐个检查商品
 - 🤖 **Telegram Bot** — 补货自动推送 + 管理员指令（/list /on /off /add /discover）
 - 🕵️ **自动新品发现** — 每 4 小时扫描商家官方页面，自动识别新产品并入库
 - ⚡ **内置测速** — LibreSpeed 兼容的下载/上传/Ping 速度测试
@@ -24,8 +24,9 @@
 git clone https://github.com/wsuming97/vpsbj.git
 cd vpsbj
 
-# 2. 配置环境变量（编辑 docker-compose.yml 中的 TG_BOT_TOKEN 和 TG_CHANNEL_ID）
-nano docker-compose.yml
+# 2. 配置环境变量（推荐复制 .env.example 到 .env 后填写）
+cp .env.example .env
+nano .env
 
 # 3. 一键启动
 docker-compose up -d
@@ -69,11 +70,12 @@ pm2 save
 ## 项目结构
 
 ```
-├── server.js          # Express 主服务（API + 测速端点）
-├── scraper.js         # 库存检测爬虫引擎（每 60 秒）
+├── server.js          # Express 主服务（API + SSE + 管理接口）
+├── scraper.js         # 库存检测引擎（每 5 分钟启动一轮）
 ├── discovery.js       # 自动新品发现引擎（每 4 小时）
 ├── tgBot.js           # Telegram Bot（通知 + 管理指令）
-├── catalog.json       # 产品数据库
+├── db.js              # SQLite 数据访问层
+├── data/              # SQLite 数据文件目录（默认 vps-monitor.db）
 ├── Dockerfile         # Docker 构建文件
 ├── docker-compose.yml # Docker Compose 配置
 └── public/            # 前端静态文件
@@ -91,7 +93,10 @@ pm2 save
 | `TG_BOT_TOKEN` | ✅ | Telegram Bot Token |
 | `TG_CHANNEL_ID` | ✅ | 推送目标频道（如 @dmvpsjk） |
 | `TG_ADMIN_ID` | ✅ | 管理员 Telegram 用户 ID |
+| `ADMIN_TOKEN` | ❌ | 管理后台接口鉴权口令，未设置时使用服务默认值 |
 | `PORT` | ❌ | 服务端口，默认 4000 |
+| `SITE_URL` | ❌ | TG /site 指令返回的站点地址 |
+| `PUPPETEER_EXECUTABLE_PATH` | ❌ | 手动部署时可指定 Chromium 路径 |
 
 ## Telegram Bot 指令
 
