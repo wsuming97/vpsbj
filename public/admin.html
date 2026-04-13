@@ -307,8 +307,8 @@
     let historyChartInstance = null;
     let selectedIds = new Set();
 
-    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页 或 冗余提取(Deploy Server)
-    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i, /deploy server/i, /order link/i];
+    // 垃圾数据检测：名称含错误页关键词 或 Cloudflare 拦截页
+    const junkPatterns = [/oops/i, /there's a problem/i, /404/i, /not found/i, /shopping cart/i, /stack error/i, /encountered a problem/i, /just a moment/i, /checking your browser/i, /cloudflare/i];
     function isJunk(item) {
       for (const pat of junkPatterns) { if (pat.test(item.name)) return true; }
       return false;
@@ -340,10 +340,75 @@
         document.getElementById('dashboard').style.display = 'block';
         
         allData = json.data;
+        // 清空状态
+        selectedIds.clear();
+        updateBatchBar();
+        
         updateStats();
         filterTable();
         loadEvents();
       } catch (err) { console.error(err); }
+    }
+
+    // Checkbox Logic
+    function toggleAll(el) {
+      const isChecked = el.checked;
+      const checkboxes = document.querySelectorAll('.single-check');
+      checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+        if (isChecked) selectedIds.add(cb.value);
+        else selectedIds.delete(cb.value);
+      });
+      updateBatchBar();
+    }
+
+    function toggleSingle(el, id) {
+      if (el.checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      
+      const allChecks = document.querySelectorAll('.single-check');
+      const allChecked = Array.from(allChecks).every(cb => cb.checked);
+      document.getElementById('check-all').checked = allChecked && allChecks.length > 0;
+      
+      updateBatchBar();
+    }
+
+    function clearSelection() {
+      selectedIds.clear();
+      document.getElementById('check-all').checked = false;
+      document.querySelectorAll('.single-check').forEach(cb => cb.checked = false);
+      updateBatchBar();
+    }
+
+    function updateBatchBar() {
+      const bar = document.getElementById('batch-bar');
+      const countSpan = document.getElementById('batch-count');
+      if (selectedIds.size > 0) {
+        bar.classList.add('show');
+        countSpan.textContent = selectedIds.size;
+      } else {
+        bar.classList.remove('show');
+      }
+    }
+
+    async function batchDelete() {
+      if (selectedIds.size === 0) return;
+      if (!confirm(`⚠️ 确定要删除选中的 ${selectedIds.size} 个产品吗？\n此操作不可恢复。`)) return;
+      
+      try {
+        const res = await fetch('/api/admin/batch-delete', {
+          method: 'POST',
+          headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`🗑 已删除 ${json.deleted} 个产品`);
+          loadData();
+        } else {
+          alert('删除失败: ' + (json.error || '未知错误'));
+        }
+      } catch (e) { alert('网络错误'); }
     }
 
     function updateStats() {
@@ -439,19 +504,23 @@
 
     function renderTable(data) {
       const tbody = document.getElementById('catalog-body');
+      
+      // 取消全选框标记
+      document.getElementById('check-all').checked = false;
+      
       if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:40px;">没有符合条件的产品</td></tr>';
         return;
       }
       
       tbody.innerHTML = data.map(item => {
-        const _isPending = isPending(item);
-        const _isJunk = isJunk(item);
+        const isJunkRow = isJunk(item);
+        const isPendingRow = isPending(item);
         
         let statusBadge;
         if (item.isHidden) {
           statusBadge = '<span class="badge badge-hidden">已下架</span>';
-        } else if (_isPending || _isJunk) {
+        } else if (isPendingRow || isJunkRow) {
           statusBadge = '<span class="badge badge-pending">待确认</span>';
         } else {
           statusBadge = '<span class="badge badge-active">监控中</span>';
@@ -465,10 +534,10 @@
         const promoHtml = item.promoCode ? `<span class="prod-promo">${item.promoCode}</span>` : '<span style="color:#475569">无</span>';
         
         const checkedStr = selectedIds.has(item.id) ? 'checked' : '';
-        const rowClass = _isJunk ? 'junk-row' : '';
+        const junkClass = isJunkRow ? 'junk-row' : '';
         
-        return `<tr class="${rowClass}">
-          <td><input type="checkbox" class="row-check item-check" value="${item.id}" onchange="toggleCheck(this)" ${checkedStr}></td>
+        return `<tr class="${junkClass}">
+          <td><input type="checkbox" class="row-check single-check" value="${item.id}" ${checkedStr} onchange="toggleSingle(this, '${item.id}')"></td>
           <td>${item.providerName || item.provider}</td>
           <td>
             <div class="prod-name">${item.name}</div>
@@ -488,64 +557,6 @@
           </td>
         </tr>`;
       }).join('');
-      
-      updateBatchBar();
-    }
-
-    function toggleCheck(checkbox) {
-      if (checkbox.checked) selectedIds.add(checkbox.value);
-      else selectedIds.delete(checkbox.value);
-      updateBatchBar();
-    }
-
-    function toggleAll(headerCheckbox) {
-      const checkboxes = document.querySelectorAll('.item-check');
-      checkboxes.forEach(cb => {
-        cb.checked = headerCheckbox.checked;
-        if (headerCheckbox.checked) selectedIds.add(cb.value);
-        else selectedIds.delete(cb.value);
-      });
-      updateBatchBar();
-    }
-
-    function clearSelection() {
-      selectedIds.clear();
-      document.getElementById('check-all').checked = false;
-      document.querySelectorAll('.item-check').forEach(cb => cb.checked = false);
-      updateBatchBar();
-    }
-
-    function updateBatchBar() {
-      const bar = document.getElementById('batch-bar');
-      const count = document.getElementById('batch-count');
-      if (selectedIds.size > 0) {
-        bar.classList.add('show');
-        count.textContent = selectedIds.size;
-      } else {
-        bar.classList.remove('show');
-      }
-    }
-
-    async function batchDelete() {
-      if (selectedIds.size === 0) return;
-      if (!confirm(`⚠️ 确定要彻底删除选中的 ${selectedIds.size} 个产品吗？此操作不可恢复！`)) return;
-      
-      try {
-        const res = await fetch('/api/admin/batch-delete', {
-          method: 'POST', 
-          headers: { 'Authorization': token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: Array.from(selectedIds) })
-        });
-        const json = await res.json();
-        if (json.success) {
-          showToast(`🗑 成功批量删除 ${json.deleted} 个产品`);
-          selectedIds.clear();
-          document.getElementById('check-all').checked = false;
-          loadData();
-        } else {
-          alert('批量删除失败: ' + json.error);
-        }
-      } catch (e) { alert('网络错误'); }
     }
 
     function openEdit(id) {
