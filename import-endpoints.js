@@ -32,9 +32,15 @@ const endpointsData = {
     { label: '大阪 / LG', datacenter: 'Osaka', route: 'IIJ / 软银', type: 'lg', value: 'https://lg.osaka.ryzen.jp.zgovps.com', official: true, note: '官方 LG' }
   ],
   greencloud: [
-    { label: '新加坡 SG / KVM', datacenter: 'Singapore', route: 'KVM / 国际线路', type: 'url', value: 'https://greencloudvps.com/billing/cart.php?gid=5', official: true, note: 'Singapore KVM 列表页，待后续补充专用测试 IP' },
-    { label: '日本 JP / KVM', datacenter: 'Japan', route: 'KVM / 国际线路', type: 'url', value: 'https://greencloudvps.com/billing/cart.php?gid=11', official: true, note: 'Japan KVM 列表页，待后续补充专用测试 IP' },
-    { label: '特价 / 周年庆', datacenter: 'Special Offers', route: 'Promo / Anniversary', type: 'url', value: 'https://greencloudvps.com/billing/promotions.php', official: true, note: '官方促销聚合页' }
+    { label: '新加坡 DC1 / 测试 IP', datacenter: 'Singapore DC1', route: 'KVM / 国际线路', type: 'ip', value: 'pending-confirmation', official: false, note: '官网公开商品文案可确认机房为 Singapore DC1，真实测试 IP 待补录' },
+    { label: '新加坡 DC1 / LG', datacenter: 'Singapore DC1', route: 'KVM / 国际线路', type: 'lg', value: 'https://greencloudvps.com/billing/cart.php?gid=5', official: true, note: '当前仅确认到官方 Singapore 产品入口，暂未发现独立 LG' },
+    { label: '新加坡 DC2 / 测试 IP', datacenter: 'Singapore DC2', route: 'KVM / 国际线路', type: 'ip', value: 'pending-confirmation', official: false, note: '官网公开商品文案可确认机房为 Singapore DC2，真实测试 IP 待补录' },
+    { label: '新加坡 DC2 / LG', datacenter: 'Singapore DC2', route: 'KVM / 国际线路', type: 'lg', value: 'https://greencloudvps.com/billing/store/ryzen-kvm-vps', official: true, note: 'Ryzen KVM 列表已出现 Singapore DC2 文案，暂以该官方页面作入口占位' },
+    { label: '东京 JP IIJ / 测试 IP', datacenter: 'Tokyo JP IIJ', route: 'IIJ / 国际线路', type: 'ip', value: 'pending-confirmation', official: false, note: '官网公开商品文案可确认 Tokyo, JP IIJ Line Location，真实测试 IP 待补录' },
+    { label: '东京 JP IIJ / LG', datacenter: 'Tokyo JP IIJ', route: 'IIJ / 国际线路', type: 'lg', value: 'https://greencloudvps.com/billing/store/ryzen-kvm-vps', official: true, note: 'Ryzen KVM 列表已出现 Tokyo, JP IIJ Line Location，暂以该官方页面作入口占位' },
+    { label: '东京 JP Softbank / 测试 IP', datacenter: 'Tokyo JP Softbank', route: 'Softbank / 国际线路', type: 'ip', value: 'pending-confirmation', official: false, note: '官网公开商品文案可确认 Tokyo, JP Softbank Line Location，真实测试 IP 待补录' },
+    { label: '东京 JP Softbank / LG', datacenter: 'Tokyo JP Softbank', route: 'Softbank / 国际线路', type: 'lg', value: 'https://greencloudvps.com/billing/cart.php?gid=5', official: true, note: '预算 KVM 商品页已出现 Tokyo, JP Softbank Line Location，暂以官方产品入口页作占位' },
+    { label: '特价 / 周年庆', datacenter: 'Special Offers', route: 'Promo / Anniversary', type: 'url', value: 'https://greencloudvps.com/billing/promotions.php', official: true, note: '官方促销聚合页；当前访问可能返回 404，保留作活动入口占位' }
   ],
   colocrossing: [
     { label: '洛杉矶 / 测试 IP', datacenter: 'Los Angeles', route: '默认线路', type: 'ip', value: '107.175.180.6', official: true, note: '官方测试 IP' },
