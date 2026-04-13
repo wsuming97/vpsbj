@@ -11,16 +11,14 @@
  * 与 scraper.js 配合：
  *   scraper.js 负责库存检测（每 15 分钟），本模块负责新品发现（每 4 小时）
  */
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
-
-puppeteer.use(StealthPlugin());
+// 共享 Chromium 单例，与 scraper.js 复用同一进程
+import { getBrowser } from './browser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -168,39 +166,8 @@ const COMPETITOR_SOURCES = [
 ];
 
 // ============================================================
-// Puppeteer 浏览器管理
+// 浏览器由 browser.js 共享单例提供，此处不再独立管理
 // ============================================================
-let discoverBrowser = null;
-
-async function getDiscoverBrowser() {
-  if (!discoverBrowser || !discoverBrowser.isConnected()) {
-    discoverBrowser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--ignore-certificate-errors',
-        // ── 磁盘控制：防止 Chromium 缓存无限增长 ──
-        '--disable-dev-shm-usage',
-        '--disk-cache-size=0',
-        '--media-cache-size=0',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--aggressive-cache-discard',
-      ],
-    });
-  }
-  return discoverBrowser;
-}
-
-async function closeDiscoverBrowser() {
-  if (discoverBrowser) {
-    await discoverBrowser.close().catch(() => {});
-    discoverBrowser = null;
-  }
-}
 
 // ============================================================
 // 从产品页面抓取真实名称、价格和优惠码
@@ -949,7 +916,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   let totalNewCount = 0;
   const newsByProvider = {}; // { providerName: [pid] }
 
-  const browser = await getDiscoverBrowser();
+  const browser = await getBrowser();
 
   // ── 第一层：扫描官方商家页面 ──
   for (const source of SCAN_SOURCES) {
@@ -1317,7 +1284,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     console.log(`\n[Discoverer] ✅ 扫描完成，未发现新品。当前共 ${catalogRef.length} 款`);
   }
 
-  await closeDiscoverBrowser();
+  // 不关闭浏览器——与 scraper.js 共享同一 Chromium 实例，由 browser.js 统一管理
   return totalNewCount;
 }
 

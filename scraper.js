@@ -1,6 +1,4 @@
 import fs from 'fs';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import * as cheerio from 'cheerio';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,8 +6,8 @@ import { fileURLToPath } from 'url';
 import eventBus from './eventBus.js';
 // 使用 SQLite 数据库替代 catalog.json
 import db from './db.js';
-
-puppeteer.use(StealthPlugin());
+// 共享 Chromium 单例，与 discovery.js 复用同一进程
+import { getBrowser } from './browser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,31 +54,6 @@ export function reloadCatalog() {
 // Sleep function to avoid hitting rate limits
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let browserInstance = null;
-
-async function getBrowser() {
-  if (!browserInstance) {
-    browserInstance = await puppeteer.launch({
-      headless: "new",
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--ignore-certificate-errors',
-        '--disable-blink-features=AutomationControlled',
-        // ── 磁盘控制：防止 Chromium 缓存无限增长 ──
-        '--disable-dev-shm-usage',      // 不使用 /dev/shm，改用 /tmp
-        '--disk-cache-size=0',           // 禁用磁盘缓存
-        '--media-cache-size=0',          // 禁用媒体缓存
-        '--disable-gpu',                 // 禁用 GPU（无头模式不需要）
-        '--disable-software-rasterizer', // 禁用软件光栅化
-        '--disable-extensions',          // 禁用扩展
-        '--disable-background-networking',// 禁用后台网络请求
-        '--aggressive-cache-discard',    // 积极丢弃缓存
-      ]
-    });
-  }
-  return browserInstance;
-}
 
 export async function checkProductStock(product) {
   let page = null;
