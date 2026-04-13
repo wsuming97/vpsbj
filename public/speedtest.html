@@ -396,6 +396,10 @@
       document.getElementById('product-meta').innerHTML = meta.map(item => `<span class="summary-pill">${escapeHtml(item)}</span>`).join('');
     }
 
+    function isPendingEndpointValue(value) {
+      return String(value || '').trim().toLowerCase() === 'pending-confirmation';
+    }
+
     function renderEndpoints(product) {
       const listEl = document.getElementById('endpoint-list');
       const endpoints = Array.isArray(product.testEndpoints) ? [...product.testEndpoints] : [];
@@ -414,16 +418,22 @@
 
       listEl.innerHTML = Object.entries(grouped).map(([datacenter, items]) => {
         const cards = items.map((endpoint, index) => {
-          const actionButton = endpoint.type === 'ip'
-            ? `<button class="endpoint-btn" data-copy="${escapeHtml(endpoint.value)}">复制 IP</button>`
-            : `<span class="endpoint-btn endpoint-btn-info" title="仅供参考，请自行访问">${escapeHtml(endpoint.type === 'lg' ? 'LG 节点' : '测速节点')}</span>`;
+          const isPending = isPendingEndpointValue(endpoint.value);
+          const displayValue = isPending
+            ? (endpoint.type === 'ip' ? '待补充测试 IP' : '待补充测试入口')
+            : (endpoint.value || '待补充');
+          const actionButton = isPending
+            ? '<span class="endpoint-btn endpoint-btn-info" title="该节点仍在补录中">待补录</span>'
+            : endpoint.type === 'ip'
+              ? `<button class="endpoint-btn" data-copy="${escapeHtml(endpoint.value)}">复制 IP</button>`
+              : `<span class="endpoint-btn endpoint-btn-info" title="仅供参考，请自行访问">${escapeHtml(endpoint.type === 'lg' ? 'LG 节点' : '测速节点')}</span>`;
 
           return `
             <div class="endpoint-card">
               <div class="endpoint-main">
                 <div class="endpoint-label">${escapeHtml(endpoint.label || `节点 ${index + 1}`)}</div>
                 <div class="endpoint-meta">${escapeHtml(endpoint.route || '线路待补充')} · ${escapeHtml(endpoint.type || '类型待补充').toUpperCase()}</div>
-                <div class="endpoint-value">${escapeHtml(endpoint.value || '待补充')}</div>
+                <div class="endpoint-value">${escapeHtml(displayValue)}</div>
                 ${endpoint.note ? `<div class="endpoint-meta">备注：${escapeHtml(endpoint.note)}</div>` : ''}
               </div>
               <div class="endpoint-actions">${actionButton}</div>
@@ -431,11 +441,13 @@
           `;
         }).join('');
 
+        const visibleCount = items.filter(item => !isPendingEndpointValue(item.value)).length;
+
         return `
           <section class="endpoint-group">
             <div class="endpoint-group-header">
               <div class="endpoint-group-title">${escapeHtml(datacenter)}</div>
-              <div class="endpoint-group-count">${items.length} 个节点</div>
+              <div class="endpoint-group-count">${items.length} 个节点${visibleCount < items.length ? ` · 已录入 ${visibleCount}` : ''}</div>
             </div>
             <div class="endpoint-group-body">${cards}</div>
           </section>

@@ -13,15 +13,10 @@
  */
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import db from './db.js';
 // 共享 Chromium 单例，与 scraper.js 复用同一进程
 import { getBrowser } from './browser.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ============================================================

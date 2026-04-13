@@ -40,10 +40,3 @@ export async function getBrowser() {
   }
   return browserInstance;
 }
-
-export async function closeBrowser() {
-  if (browserInstance) {
-    await browserInstance.close().catch(() => {});
-    browserInstance = null;
-  }
-}

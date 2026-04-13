@@ -2,8 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
-import { runScraperCycle, stockState, catalog, reloadCatalog, setDiscoveryRunning } from './scraper.js';
+import { runScraperCycle, stockState, catalog, reloadCatalog } from './scraper.js';
 import db from './db.js';
 import eventBus from './eventBus.js';
 

@@ -1,7 +1,3 @@
-import fs from 'fs';
-import * as cheerio from 'cheerio';
-import path from 'path';
-import { fileURLToPath } from 'url';
 // 使用事件总线替代对 tgBot.js 的直接 import，打破循环依赖
 import eventBus from './eventBus.js';
 // 使用 SQLite 数据库替代 catalog.json
@@ -9,8 +5,6 @@ import db from './db.js';
 // 共享 Chromium 单例，与 discovery.js 复用同一进程
 import { getBrowser } from './browser.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // 从数据库加载产品列表（替代原来的 catalog.json 读取）
 export let catalog = db.getAllProducts();

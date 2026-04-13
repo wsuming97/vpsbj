@@ -200,11 +200,6 @@ function getAllProducts() {
   return rows.map(rowToProduct);
 }
 
-/** 获取全部非隐藏产品 */
-function getVisibleProducts() {
-  const rows = db.prepare('SELECT * FROM products WHERE is_hidden = 0').all();
-  return rows.map(rowToProduct);
-}
 
 /** 获取单个产品 */
 function getProduct(id) {
@@ -405,7 +400,7 @@ initDB();
 export default {
   db,               // 原始 db 实例（高级用途）
   getAllProducts,
-  getVisibleProducts,
+
   getProduct,
   productExists,
   isLocked,
