@@ -24,6 +24,8 @@ app.get('/api/vps/stock', (req, res) => {
   const showAll = req.query.all === '1';
   const stockList = Object.values(stockState).filter(p => {
     if (p.isHidden) return false;
+    // 隐藏还未人工补全价格（处于待确认状态）的商品
+    if (p.price === '待确认' || p.price === '价格待确认') return false; 
     if (showAll) return true;
     return p.inStock === true;
   });
