@@ -174,6 +174,7 @@
         <span class="stat-item">总计 <span class="stat-num" id="stat-total">0</span></span>
         <span class="stat-item">监控中 <span class="stat-num" id="stat-active">0</span></span>
         <span class="stat-item">待确认 <span class="stat-num" id="stat-pending">0</span></span>
+        <span class="stat-item" style="display:none">垃圾数据 <span class="stat-num" style="color:#ef4444" id="stat-junk">0</span></span>
         <span class="stat-item">已下架 <span class="stat-num" id="stat-hidden">0</span></span>
       </div>
     </div>
@@ -412,8 +413,8 @@
     }
 
     function updateStats() {
-      const activeCount = allData.filter(x => !x.isHidden).length;
-      const pendingCount = allData.filter(x => isPending(x) || isJunk(x)).length;
+      const activeCount = allData.filter(x => !x.isHidden && !isPending(x) && !isJunk(x)).length;
+      const pendingCount = allData.filter(x => isPending(x)).length;
       const hiddenCount = allData.filter(x => x.isHidden).length;
       const junkCount = allData.filter(x => isJunk(x)).length;
 
@@ -421,10 +422,16 @@
       document.getElementById('stat-active').textContent = activeCount;
       document.getElementById('stat-pending').textContent = pendingCount;
       document.getElementById('stat-hidden').textContent = hiddenCount;
+      
+      const statJunkEl = document.getElementById('stat-junk');
+      if (statJunkEl) {
+        statJunkEl.textContent = junkCount;
+        statJunkEl.parentElement.style.display = junkCount > 0 ? 'inline-block' : 'none';
+      }
 
-      // 有待确认时显示清理按钮
+      // 有垃圾或待确认时显示清理按钮
       const purgeBtn = document.getElementById('btn-purge');
-      if (purgeBtn) purgeBtn.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+      if (purgeBtn) purgeBtn.style.display = (pendingCount > 0 || junkCount > 0) ? 'inline-flex' : 'none';
 
       // Update Chart
       const ctx = document.getElementById('stockChart').getContext('2d');
@@ -432,10 +439,10 @@
       stockChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['监控中', '待确认', '已下架'],
+          labels: ['监控中', '待确认', '已下架', '垃圾数据'],
           datasets: [{
-            data: [activeCount, pendingCount, hiddenCount],
-            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+            data: [activeCount, pendingCount, hiddenCount, junkCount],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#ef4444'],
             borderWidth: 0
           }]
         },
