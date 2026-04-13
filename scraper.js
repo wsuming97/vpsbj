@@ -91,24 +91,37 @@ export async function checkProductStock(product) {
     // Set typical viewport and user agent
     await page.setViewport({ width: 1280, height: 720 });
     
-    await page.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    
-    // Cloudflare wait if challenged
-    await sleep(4000); 
-    
+    await page.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await sleep(5000);
+
     const html = await page.content();
-    
-    // Detect basic anti-bot failure
-    if (html.includes('cf-browser-verification') && !html.includes(product.providerName)) {
+    const htmlLower = html.toLowerCase();
+
+    // Detect blank / empty page (JS渲染失败或被拦截返回空壳)
+    const bodyLen = await page.evaluate(() => (document.body ? document.body.innerText.trim().length : 0));
+    if (bodyLen < 100) {
+      throw new Error('Page returned empty content (possible bot block or JS render failure)');
+    }
+
+    // Detect Cloudflare and anti-bot challenges
+    const cfPatterns = ['cf-browser-verification', 'just a moment', 'checking your browser', 'enable javascript and cookies'];
+    if (cfPatterns.some(p => htmlLower.includes(p))) {
       throw new Error('Blocked by Cloudflare/Bot Protection');
     }
 
-    // Default to inStock unless we find an Out of Stock keyword
+    // Detect 404 / invalid pages — mark as out of stock (not throw, avoid false restock alert)
+    const invalidPagePatterns = ["there's a problem", 'the resource requested could not be found', 'stack error - 404', '404 not found'];
+    const isInvalidPage = invalidPagePatterns.some(p => htmlLower.includes(p)) && bodyLen < 2000;
+
     let inStock = true;
-    for (const keyword of product.outOfStockKeywords) {
-      if (html.toLowerCase().includes(keyword.toLowerCase())) {
-        inStock = false;
-        break;
+    if (isInvalidPage) {
+      inStock = false;
+    } else {
+      for (const keyword of product.outOfStockKeywords) {
+        if (htmlLower.includes(keyword.toLowerCase())) {
+          inStock = false;
+          break;
+        }
       }
     }
 
@@ -152,51 +165,71 @@ export async function runScraperCycle() {
 
         // ── 补货瞬间：实时抓取最新价格（硬件涨价可能导致价格变动） ──
         let livePrice = null;
+        let liveCycles = null;
         let oldPrice = product.price;
         try {
           const browser = await getBrowser();
           const pricePage = await browser.newPage();
           try {
-            await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-            await sleep(3000);
+            await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await sleep(4000);
             const priceInfo = await pricePage.evaluate(() => {
+              const result = { price: null, billingCycles: null };
               const text = document.body.innerText;
+              const cycleKeyMap = {
+                'monthly': 'monthly', 'quarterly': 'quarterly',
+                'semi-annually': 'semiAnnually', 'semi-annual': 'semiAnnually',
+                'annually': 'annually', 'annual': 'annually',
+                'biennially': 'biennially', 'trienn': 'triennially',
+              };
+              const cycleDisplayMap = {
+                'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
+                'annually': '年', 'biennially': '两年', 'triennially': '三年',
+              };
 
-              // ---- 优先级 1：WHMCS 下拉框精确提取 ----
+              // ---- 优先级 1：WHMCS 下拉框 — 提取所有计费周期 ----
               const billingSelect = document.querySelector('select[name="billingcycle"]');
-              if (billingSelect) {
-                const selectedOption = billingSelect.options[billingSelect.selectedIndex];
-                const selectedText = selectedOption ? selectedOption.textContent.trim() : '';
-                const cycleMap = {
-                  'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
-                  'annually': '年', 'biennially': '两年', 'triennially': '三年',
-                };
-                const pm = selectedText.match(/\$(\d+[.,]\d{2})/);
-                if (pm) {
-                  let period = '';
-                  for (const [key, val] of Object.entries(cycleMap)) {
-                    if (selectedText.toLowerCase().includes(key)) { period = val; break; }
+              if (billingSelect && billingSelect.options.length > 0) {
+                const cycles = {};
+                let defaultPrice = null;
+                let defaultDisplay = null;
+                Array.from(billingSelect.options).forEach((opt, idx) => {
+                  const t = opt.textContent.trim();
+                  const pm = t.match(/\$(\d+[.,]\d{2})/);
+                  if (!pm) return;
+                  const priceStr = '$' + pm[1];
+                  for (const [key, cKey] of Object.entries(cycleKeyMap)) {
+                    if (t.toLowerCase().includes(key)) {
+                      cycles[cKey] = priceStr;
+                      if (idx === billingSelect.selectedIndex) {
+                        defaultPrice = priceStr;
+                        for (const [dk, dv] of Object.entries(cycleDisplayMap)) {
+                          if (t.toLowerCase().includes(dk)) { defaultDisplay = dv; break; }
+                        }
+                      }
+                      break;
+                    }
                   }
-                  return '$' + pm[1] + '/' + (period || '未知周期');
+                });
+                if (Object.keys(cycles).length > 0) {
+                  result.billingCycles = cycles;
+                  result.price = defaultPrice ? (defaultPrice + (defaultDisplay ? '/' + defaultDisplay : '')) : null;
+                  return result;
                 }
               }
 
               // ---- 优先级 1.5：DMIT 按钮式计费周期 ----
-              const cycleMapBtn = {
-                'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
-                'annually': '年', 'biennially': '两年', 'triennially': '三年',
-              };
               const activeBtn = document.querySelector('.billing-cycle .active, [class*="billing"] .active, [class*="cycle"] .active, button.active[data-cycle], .btn-group .active');
               if (activeBtn) {
                 const btnText = activeBtn.textContent.trim().toLowerCase();
                 let detectedPeriod = '';
-                for (const [key, val] of Object.entries(cycleMapBtn)) {
+                for (const [key, val] of Object.entries(cycleDisplayMap)) {
                   if (btnText.includes(key)) { detectedPeriod = val; break; }
                 }
                 if (detectedPeriod) {
                   const summaryArea = document.querySelector('.order-summary, [class*="summary"], [class*="order"]') || document.body;
                   const pm = summaryArea.innerText.match(/\$\s*(\d+[.,]\d{2})/);
-                  if (pm) return '$' + pm[1] + '/' + detectedPeriod;
+                  if (pm) { result.price = '$' + pm[1] + '/' + detectedPeriod; return result; }
                 }
               }
 
@@ -204,22 +237,23 @@ export async function runScraperCycle() {
               const strictPatterns = [
                 { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
                 { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
-                // 反向：价格在前（DMIT 格式）
                 { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Monthly/i, p: '月' },
                 { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Annually/i, p: '年' },
                 { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Quarterly/i, p: '季' },
                 { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Semi-?Annually/i, p: '半年' },
-                // 正向：周期词在前
                 { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
                 { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
               ];
               for (const { re, p } of strictPatterns) {
                 const m = text.match(re);
-                if (m) return '$' + m[1] + '/' + p;
+                if (m) { result.price = '$' + m[1] + '/' + p; return result; }
               }
-              return null;
+              return result;
             });
-            if (priceInfo) livePrice = priceInfo;
+            if (priceInfo && priceInfo.price) {
+              livePrice = priceInfo.price;
+              liveCycles = priceInfo.billingCycles;
+            }
           } finally {
             await pricePage.close();
           }
@@ -232,16 +266,25 @@ export async function runScraperCycle() {
         if (livePrice && livePrice !== oldPrice) {
           priceChanged = true;
           console.log(`💰 [PRICE UPDATE] ${product.name}: ${oldPrice} → ${livePrice}`);
-          
-          // 更新数据库中的价格
-          db.updateProduct(product.id, { price: livePrice });
+
+          // 更新价格，同时保存抓到的全部计费周期
+          const updateData = { price: livePrice };
+          if (liveCycles && Object.keys(liveCycles).length > 0) {
+            updateData.billingCycles = liveCycles;
+            console.log(`📅 [BILLING CYCLES] ${product.name}: 抓到 ${Object.keys(liveCycles).length} 个计费周期`);
+          }
+          db.updateProduct(product.id, updateData);
           // 记录价格变动历史
           db.recordPriceChange(product.id, oldPrice, livePrice);
-          
+
           // 同步到内存
           stockState[product.id].price = livePrice;
           const catIdx = catalog.findIndex(c => c.id === product.id);
           if (catIdx !== -1) catalog[catIdx].price = livePrice;
+        } else if (liveCycles && Object.keys(liveCycles).length > 0) {
+          // 价格没变但抓到了多周期数据，也存一下
+          db.updateProduct(product.id, { billingCycles: liveCycles });
+          console.log(`📅 [BILLING CYCLES] ${product.name}: 补录 ${Object.keys(liveCycles).length} 个计费周期`);
         }
 
         restockedProducts.push({

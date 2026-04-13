@@ -113,11 +113,9 @@ const SCAN_SOURCES = [
     providerName: 'ColoCrossing',
     domain: 'cloud.colocrossing.com',
     affParam: `aff=${AFF.colo}`,
-    mode: 'page-scan',
-    scanUrls: [
-      'https://cloud.colocrossing.com/cloud-vps/',
-      'https://cloud.colocrossing.com/cart.php',
-    ],
+    mode: 'pid-probe',
+    probeRange: 20,
+    startPid: 10,     // 由于可能没有历史存量，提供一个安全起点，强制扫描
     outOfStockKeywords: ['Out of Stock', 'out of stock'],
   },
 
@@ -208,7 +206,7 @@ async function closeDiscoverBrowser() {
 // 从产品页面抓取真实名称、价格和优惠码
 // ============================================================
 async function scrapeProductDetails(browser, url) {
-  const details = { name: null, price: null, promoCode: null, specs: {} };
+  const details = { name: null, price: null, promoCode: null, billingCycles: null, specs: {} };
   const page = await browser.newPage();
   try {
     // 先检查 URL 参数中是否已有优惠码
@@ -279,40 +277,55 @@ async function scrapeProductDetails(browser, url) {
         }
       }
 
-      // ── 提取价格（精确解析 WHMCS 计费周期） ──
+      // ── 提取价格 + 全部计费周期（精确解析 WHMCS 计费周期） ──
       // 策略：优先读 WHMCS 的 <select> 下拉框 DOM，正则兜底
 
-      // ---- 第一优先级：WHMCS 下拉框精确提取 ----
+      // ---- 第一优先级：WHMCS 下拉框精确提取（同时提取所有周期） ----
       const billingSelect = document.querySelector('select[name="billingcycle"]');
-      if (billingSelect) {
-        const selectedOption = billingSelect.options[billingSelect.selectedIndex];
-        const selectedText = selectedOption ? selectedOption.textContent.trim() : '';
-        const cycleMap = {
+      if (billingSelect && billingSelect.options.length > 0) {
+        const cycleKeyMap = {
+          'monthly': 'monthly', 'quarterly': 'quarterly',
+          'semi-annually': 'semiAnnually', 'semi-annual': 'semiAnnually',
+          'annually': 'annually', 'annual': 'annually',
+          'biennially': 'biennially', 'trienn': 'triennially',
+        };
+        const cycleDisplayMap = {
           'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
           'annually': '年', 'biennially': '两年', 'triennially': '三年',
         };
-        // 先取被选中的那个周期
-        const optionPrice = selectedText.match(/\$(\d+[.,]\d{2})/);
-        if (optionPrice) {
-          let period = '';
-          for (const [key, val] of Object.entries(cycleMap)) {
-            if (selectedText.toLowerCase().includes(key)) { period = val; break; }
+        const cycles = {};
+        let defaultPrice = null;
+        let defaultDisplay = null;
+        Array.from(billingSelect.options).forEach((opt, idx) => {
+          const t = opt.textContent.trim();
+          const pm = t.match(/\$(\d+[.,]\d{2})/);
+          if (!pm) return;
+          const priceStr = '$' + pm[1];
+          for (const [key, cKey] of Object.entries(cycleKeyMap)) {
+            if (t.toLowerCase().includes(key)) {
+              cycles[cKey] = priceStr;
+              if (idx === billingSelect.selectedIndex) {
+                defaultPrice = priceStr;
+                for (const [dk, dv] of Object.entries(cycleDisplayMap)) {
+                  if (t.toLowerCase().includes(dk)) { defaultDisplay = dv; break; }
+                }
+              }
+              break;
+            }
           }
-          result.price = '$' + optionPrice[1] + '/' + (period || '未知周期');
+        });
+        if (Object.keys(cycles).length > 0) {
+          result.billingCycles = cycles;
+          result.price = defaultPrice
+            ? (defaultPrice + (defaultDisplay ? '/' + defaultDisplay : ''))
+            : Object.values(cycles)[0];
         }
-        // 如果选中项没价格，遍历全部 option
+        // 如果还是没有价格，降级到逐项扫描
         if (!result.price) {
           for (const opt of billingSelect.options) {
             const t = opt.textContent.trim();
             const pm = t.match(/\$(\d+[.,]\d{2})/);
-            if (pm) {
-              let period = '';
-              for (const [key, val] of Object.entries(cycleMap)) {
-                if (t.toLowerCase().includes(key)) { period = val; break; }
-              }
-              result.price = '$' + pm[1] + '/' + (period || '未知周期');
-              break;
-            }
+            if (pm) { result.price = '$' + pm[1]; break; }
           }
         }
       }
@@ -406,7 +419,10 @@ async function scrapeProductDetails(browser, url) {
 
     details.name = info.name;
     details.price = info.price;
-    details.isInvalid = info.isInvalid; // 保存失效标志
+    details.isInvalid = info.isInvalid;
+    if (info.billingCycles && Object.keys(info.billingCycles).length > 0) {
+      details.billingCycles = info.billingCycles;
+    }
     // URL 参数中的优惠码优先级高于页面检测
     if (!details.promoCode && info.promoCode) details.promoCode = info.promoCode;
 
@@ -652,7 +668,10 @@ async function probePids(browser, source, catalogRef) {
     }
   });
 
-  if (maxPid === 0) return pids; // 该商家没有已知 PID，跳过探测
+  if (maxPid === 0) {
+    if (source.startPid) maxPid = source.startPid;
+    else return pids; // 该商家没有已知 PID，且无默认起点，跳过探测
+  }
 
   console.log(`[Discoverer]     PID 探测范围: ${maxPid + 1} ~ ${maxPid + source.probeRange}`);
 
@@ -1046,6 +1065,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           name: realName,
           price: realPrice,
           promoCode: details.promoCode || null,
+          billingCycles: details.billingCycles || {},
           specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
           datacenters: ['待确认'],
           networkRoutes: ['待确认'],
@@ -1144,6 +1164,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       realName = realName || `${cp.providerName} 新品 (pid=${cp.pid})`;
       realPrice = realPrice || '价格待确认';
       const isAutoLive = realPrice !== '价格待确认';
+      const realCycles = (details && details.billingCycles) ? details.billingCycles : {};
 
       const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
       const newEntry = {
@@ -1153,6 +1174,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         name: realName,
         price: realPrice,
         promoCode: promoCode || null,
+        billingCycles: realCycles,
         specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
         datacenters: ['待确认'],
         networkRoutes: ['待确认'],

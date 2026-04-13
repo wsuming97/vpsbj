@@ -257,9 +257,10 @@ export function initBot() {
       'dmitea.com': { provider: 'dmit', providerName: 'DMIT', affBase: 'https://www.dmit.io/aff.php?aff=16687&pid=' },
       'racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
       'my.racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
-      'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', affBase: null },
-      'cloudcone.com': { provider: 'cloudcone', providerName: 'CloudCone', affBase: null },
-      'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', affBase: null },
+      'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', affBase: 'https://clients.zgovps.com/aff.php?aff=912&pid=' },
+      'cloudcone.com': { provider: 'cloudcone', providerName: 'CloudCone', affBase: null },   // CloudCone 用 ref= 格式，特殊处理
+      'app.cloudcone.com': { provider: 'cloudcone', providerName: 'CloudCone', affBase: null },
+      'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', affBase: 'https://cloud.colocrossing.com/aff.php?aff=1633&pid=' },
     };
 
     bot.onText(/^\/add (.+)/, async (msg, match) => {
@@ -325,8 +326,15 @@ export function initBot() {
         if (exists) continue;
 
         let affUrl = url;
-        if (matched.affBase) affUrl = matched.affBase + pid;
-        let checkUrl = (url.includes('pid=') || !matched.affBase) ? url : `https://${domain}/cart.php?a=add&pid=${pid}`;
+        if (matched.affBase) {
+          affUrl = matched.affBase + pid;
+        } else if (matched.provider === 'cloudcone') {
+          // CloudCone 用 ref= 参数，URL 格式为 /vps/{id}/create?ref=...
+          affUrl = `https://app.cloudcone.com/vps/${pid}/create?ref=14121`;
+        }
+        let checkUrl = matched.provider === 'cloudcone'
+          ? `https://app.cloudcone.com/vps/${pid}/create`
+          : (url.includes('pid=') || !matched.affBase) ? url : `https://${domain}/cart.php?a=add&pid=${pid}`;
 
         catalog.push({
           id,
