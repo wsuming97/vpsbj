@@ -382,6 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const msg = JSON.parse(e.data);
 
+        if (msg.type === 'ping') return; // 保活帧，忽略
+
         if (msg.type === 'init') {
           // 初始快照：用 SSE 返回的数据替代 fetch 初始化
           currentData = msg.data.filter(p => !p.isHidden);
@@ -410,11 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     es.onerror = () => {
       es.close();
-      // SSE 断开后 5 秒重连
-      sseRetryTimer = setTimeout(() => {
-        connectSSE();
-        fetchData(); // 补一次全量拉取，避免断连期间漏掉变化
-      }, 5000);
+      // SSE 断开后 5 秒重连，重连后 init 事件会自动刷新数据，不需要额外 fetchData
+      sseRetryTimer = setTimeout(connectSSE, 5000);
     };
   }
 

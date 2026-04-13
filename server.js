@@ -78,8 +78,8 @@ app.get('/api/sse', (req, res) => {
 
   sseClients.add(res);
 
-  // 保活 ping，每 25 秒（防止代理断连）
-  const ping = setInterval(() => res.write(': ping\n\n'), 25000);
+  // 保活 ping，每 20 秒，用真正的 data 帧（注释行部分 Nginx 不计入活跃流量）
+  const ping = setInterval(() => res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`), 20000);
 
   req.on('close', () => {
     clearInterval(ping);
