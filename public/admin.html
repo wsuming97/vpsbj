@@ -315,6 +315,7 @@
       return false;
     }
     function isPending(item) {
+      if (isJunk(item)) return false;
       return (item.price === '待确认' || item.price === '价格待确认');
     }
 
