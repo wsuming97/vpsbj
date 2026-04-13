@@ -329,10 +329,14 @@ function updateProduct(id, updates) {
   db.prepare(sql).run(values);
 }
 
-/** 删除产品（同时记入黑名单，防止发现引擎重新扫入） */
+/** 删除产品（普通删除，不拉黑，商家补货后可被重新发现） */
 function deleteProduct(id) {
   db.prepare('DELETE FROM products WHERE id = ?').run(id);
-  // 记入清理黑名单
+}
+
+/** 删除产品并拉黑（用于垃圾数据清理，永久阻止发现引擎重新扫入） */
+function purgeProduct(id) {
+  db.prepare('DELETE FROM products WHERE id = ?').run(id);
   db.prepare('INSERT OR IGNORE INTO purged_ids (id) VALUES (?)').run(id);
 }
 
@@ -427,6 +431,7 @@ export default {
   updateProduct,
   updateProductsByProvider,
   deleteProduct,
+  purgeProduct,
   isIdPurged,
   clearPurgedId,
   recordPriceChange,

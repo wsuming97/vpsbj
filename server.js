@@ -227,7 +227,7 @@ app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   
   let deleted = 0;
   for (const item of pendingItems) {
-    db.deleteProduct(item.id);
+    db.purgeProduct(item.id); // purge = 删除 + 拉黑，垃圾数据永不重新扫入
     deleted++;
   }
   

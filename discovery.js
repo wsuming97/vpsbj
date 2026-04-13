@@ -813,7 +813,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
            console.log(`[Discoverer]     🚫 页面失效/缺货无法获取信息，跳过上架`);
            // 拉黑，避免下轮又试
            if (!db.isIdPurged(candidateId)) {
-             db.deleteProduct(candidateId); // deleteProduct 内部会自动记入黑名单
+             db.purgeProduct(candidateId); // purge = 删除 + 拉黑，确认垃圾页面永不重新扫入
            }
            continue; 
         }
@@ -904,7 +904,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 
         if (scrapedDetails.isInvalid || (scrapedDetails.name && (scrapedDetails.name.includes('Shopping Cart') || scrapedDetails.name.includes('404')))) {
            console.log(`[Discoverer]     🚫 无效页面/已下架，拉黑防止重复扫入`);
-           db.deleteProduct(candidateId); // deleteProduct 内部自动记入黑名单
+           db.purgeProduct(candidateId); // purge = 删除 + 拉黑，确认垃圾页面永不重新扫入
            continue;
         }
 
