@@ -20,7 +20,7 @@ import { getBrowser } from './browser.js';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ============================================================
-// 推广 ID（与 scrape-all.mjs 保持一致）
+// 推广 ID
 // ============================================================
 const AFF = {
   bwh: 81381,
@@ -790,22 +790,31 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 
     // 和 catalog 做 diff
     for (const pid of discoveredPids) {
+      const candidateId = `${source.provider}-auto-${pid}`;
       const exists = catalogRef.some(c =>
         (c.provider === source.provider && c.checkUrl && c.checkUrl.includes(`pid=${pid}`)) ||
-        c.id === `${source.provider}-auto-${pid}` ||
+        c.id === candidateId ||
         c.id === `${source.provider}-specials-${pid}` ||
         c.id === `${source.provider}-${pid}`
       );
 
-      if (!exists) {
+      // 黑名单检查：管理员删过的 PID 不再重新扫入
+      if (exists || db.isIdPurged(candidateId)) {
+        continue;
+      }
+
         // 自动抓取产品页面获取真实名称和价格
         const productUrl = `https://${source.domain}/cart.php?a=add&pid=${pid}`;
         console.log(`[Discoverer]     📝 抓取产品详情: PID=${pid}`);
         const details = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
-        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+        if (details.isInvalid || (details.name && (details.name.includes('Shopping Cart') || details.name.includes('404')))) {
            console.log(`[Discoverer]     🚫 页面失效/缺货无法获取信息，跳过上架`);
+           // 拉黑，避免下轮又试
+           if (!db.isIdPurged(candidateId)) {
+             db.deleteProduct(candidateId); // deleteProduct 内部会自动记入黑名单
+           }
            continue; 
         }
 
@@ -841,7 +850,6 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         if (!newsByProvider[source.providerName]) newsByProvider[source.providerName] = [];
         newsByProvider[source.providerName].push(pid);
         console.log(`[Discoverer]   🆕 新品: ${source.providerName} PID=${pid}`);
-      }
     }
   }
 
@@ -866,14 +874,18 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
     };
 
     // ── 通用 WHMCS 商家分支 ──
+    const candidateId = `${cp.provider}-auto-${cp.pid}`;
     const exists = catalogRef.some(c =>
       (c.provider === cp.provider && c.checkUrl && c.checkUrl.includes(`pid=${cp.pid}`)) ||
-      c.id === `${cp.provider}-auto-${cp.pid}` ||
+      c.id === candidateId ||
       c.id === `${cp.provider}-specials-${cp.pid}` ||
       c.id === `${cp.provider}-${cp.pid}`
     );
 
-    if (!exists) {
+    // 黑名单检查：管理员删过的 PID 不再重新扫入
+    if (exists || db.isIdPurged(candidateId)) continue;
+
+    {
       const src = SCAN_SOURCES.find(s => s.provider === cp.provider);
       const affParam = src ? src.affParam : '';
 
@@ -890,8 +902,9 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         scrapedDetails = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
-        if (scrapedDetails.isInvalid || scrapedDetails.name === '404 Not Found' || scrapedDetails.name === 'Shopping Cart') {
-           console.log(`[Discoverer]     🚫 无效页面/已下架，防止产生死链垃圾，跳过`);
+        if (scrapedDetails.isInvalid || (scrapedDetails.name && (scrapedDetails.name.includes('Shopping Cart') || scrapedDetails.name.includes('404')))) {
+           console.log(`[Discoverer]     🚫 无效页面/已下架，拉黑防止重复扫入`);
+           db.deleteProduct(candidateId); // deleteProduct 内部自动记入黑名单
            continue;
         }
 

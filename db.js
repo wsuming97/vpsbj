@@ -82,6 +82,13 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id);
     CREATE INDEX IF NOT EXISTS idx_stock_events_product ON stock_events(product_id);
     CREATE INDEX IF NOT EXISTS idx_products_provider ON products(provider);
+
+    -- 已清理 ID 黑名单：管理员删除/智能清理过的产品 ID 会记在这里
+    -- 防止发现引擎下一轮重新扫入同一个垃圾 PID
+    CREATE TABLE IF NOT EXISTS purged_ids (
+      id          TEXT PRIMARY KEY,
+      purged_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }
 
@@ -322,9 +329,21 @@ function updateProduct(id, updates) {
   db.prepare(sql).run(values);
 }
 
-/** 删除产品 */
+/** 删除产品（同时记入黑名单，防止发现引擎重新扫入） */
 function deleteProduct(id) {
   db.prepare('DELETE FROM products WHERE id = ?').run(id);
+  // 记入清理黑名单
+  db.prepare('INSERT OR IGNORE INTO purged_ids (id) VALUES (?)').run(id);
+}
+
+/** 检查某 ID 是否在清理黑名单中 */
+function isIdPurged(id) {
+  return !!db.prepare('SELECT 1 FROM purged_ids WHERE id = ?').get(id);
+}
+
+/** 从黑名单中移除（管理员手动重新添加某产品时调用） */
+function clearPurgedId(id) {
+  db.prepare('DELETE FROM purged_ids WHERE id = ?').run(id);
 }
 
 /** 按商家批量更新产品 */
@@ -408,6 +427,8 @@ export default {
   updateProduct,
   updateProductsByProvider,
   deleteProduct,
+  isIdPurged,
+  clearPurgedId,
   recordPriceChange,
   recordStockEvent,
   getPriceHistory,

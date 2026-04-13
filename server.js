@@ -169,6 +169,8 @@ app.post('/api/admin/catalog', requireAdmin, (req, res) => {
   const newProduct = req.body;
   if (!newProduct.id || !newProduct.name) return res.status(400).json({ success: false, error: 'Invalid product data' });
   
+  // 管理员手动添加 → 从黑名单移除（如果之前被清理过）
+  db.clearPurgedId(newProduct.id);
   db.addProduct(newProduct);
   
   reloadCatalog();
