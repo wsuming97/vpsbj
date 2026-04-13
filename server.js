@@ -143,6 +143,26 @@ app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// 批量清理「待确认」产品（一键清空垃圾探测数据）
+app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
+  const allProducts = db.getAllProducts();
+  const pendingItems = allProducts.filter(p =>
+    (p.price === '待确认' || p.price === '价格待确认') &&
+    (p.name.includes('自动发现') || p.name.includes('新品'))
+  );
+  
+  let deleted = 0;
+  for (const item of pendingItems) {
+    db.deleteProduct(item.id);
+    deleted++;
+  }
+  
+  if (deleted > 0) reloadCatalog();
+  
+  console.log(`[Admin] 🧹 批量清理了 ${deleted} 个待确认产品`);
+  res.json({ success: true, deleted });
+});
+
 // ============================================================
 // 历史数据 API
 // ============================================================

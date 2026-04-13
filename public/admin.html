@@ -193,6 +193,7 @@
       <button class="filter-btn" data-filter="active" onclick="setFilter(this)">监控中</button>
       <button class="filter-btn" data-filter="hidden" onclick="setFilter(this)">已下架</button>
       <button class="btn btn-blue" onclick="loadData()">🔄 刷新</button>
+      <button class="btn btn-red" onclick="purgePending()" id="btn-purge" style="display:none;">🧹 清理待确认</button>
     </div>
 
     <div class="table-wrap">
@@ -316,6 +317,10 @@
       document.getElementById('stat-active').textContent = activeCount;
       document.getElementById('stat-pending').textContent = pendingCount;
       document.getElementById('stat-hidden').textContent = hiddenCount;
+
+      // 有待确认时显示清理按钮
+      const purgeBtn = document.getElementById('btn-purge');
+      if (purgeBtn) purgeBtn.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
 
       // Update Chart
       const ctx = document.getElementById('stockChart').getContext('2d');
@@ -523,6 +528,22 @@
           showToast('🗑 产品已删除');
           loadData();
         }
+      } catch (e) { alert('网络错误'); }
+    }
+
+    async function purgePending() {
+      const pendingCount = allData.filter(x => (x.price === '待确认' || x.price === '价格待确认') && (x.name.includes('自动发现') || x.name.includes('新品'))).length;
+      if (pendingCount === 0) { showToast('当前没有需要清理的待确认产品'); return; }
+      if (!confirm('⚠️ 确定要一键清理 ' + pendingCount + ' 个"待确认"产品吗？\n\n这将删除所有由自动发现引擎探测到但无法获取价格的垃圾条目。\n已手动编辑过价格的产品不会被删除。')) return;
+      try {
+        const res = await fetch('/api/admin/purge-pending', {
+          method: 'POST', headers: { 'Authorization': token }
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast('🧹 已清理 ' + json.deleted + ' 个无效产品');
+          loadData();
+        } else { alert('清理失败: ' + (json.error || '未知错误')); }
       } catch (e) { alert('网络错误'); }
     }
 
