@@ -389,9 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
           currentData = msg.data.filter(p => !p.isHidden);
           currentData.sort((a,b) => (a.priority === 'high' ? -1 : 1));
 
-          // 同时刷新 provider tabs
+          // 同时刷新 provider tabs（显示全部商家，不限有货）
           const providerMap = {};
-          currentData.filter(p => p.inStock === true).forEach(p => {
+          currentData.forEach(p => {
             providerMap[p.provider] = p.providerName;
           });
           renderFilters(Object.entries(providerMap).map(([id, name]) => ({ id, name })));

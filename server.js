@@ -47,10 +47,10 @@ app.get('/api/vps/stock', (req, res) => {
 });
 
 app.get('/api/vps/providers', (req, res) => {
-  // 只返回有在售（有货）商品的商家
+  // 返回所有商家（含缺货），让前端始终显示全部 tab
   const providers = {};
   Object.values(stockState).forEach(p => {
-    if (!p.isHidden && p.inStock === true) {
+    if (!p.isHidden && p.price !== '待确认' && p.price !== '价格待确认') {
       providers[p.provider] = p.providerName;
     }
   });
