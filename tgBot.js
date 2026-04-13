@@ -1,8 +1,8 @@
 import TelegramBot from 'node-telegram-bot-api';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import eventBus from './eventBus.js';
+import db from './db.js';
 import { startDiscoveryEngine, runDiscovery } from './discovery.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -150,10 +150,11 @@ export function initBot() {
     bot.onText(/^\/site$/, (msg) => {
       if (!requireAdmin(msg)) return;
       const port = process.env.PORT || 4000;
+      const host = process.env.SITE_URL || `http://185.45.192.190:${port}`;
       bot.sendMessage(msg.chat.id,
         `🌐 **网页面板地址**\n\n` +
-        `前台展示页：http://185.45.192.190:${port}\n` +
-        `后台管理页：http://185.45.192.190:${port}/admin.html\n\n` +
+        `前台展示页：${host}\n` +
+        `后台管理页：${host}/admin.html\n\n` +
         `💡 前台只显示有货产品，库存由爬虫自动更新。`,
         { parse_mode: 'Markdown' }
       );
@@ -200,8 +201,7 @@ export function initBot() {
         return bot.sendMessage(msg.chat.id, `⚠️ 找不到 ID 为 \`${id}\` 的产品。\n提示：请使用 /list 查看确切的 ID。`, { parse_mode: 'Markdown' });
       }
 
-      catalog[productIndex].isHidden = true;
-      fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+      db.updateProduct(id, { isHidden: true });
       reloadCatalog();
 
       bot.sendMessage(msg.chat.id, `✅ 成功下架产品！\n*${catalog[productIndex].name}* 已从网页前端隐藏，爬虫也已停止对此产品的监控。`, { parse_mode: 'Markdown' });
@@ -218,8 +218,7 @@ export function initBot() {
         return bot.sendMessage(msg.chat.id, `⚠️ 找不到 ID 为 \`${id}\` 的产品。\n提示：请使用 /list 查看确切的 ID。`, { parse_mode: 'Markdown' });
       }
 
-      catalog[productIndex].isHidden = false;
-      fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
+      db.updateProduct(id, { isHidden: false });
       reloadCatalog();
 
       bot.sendMessage(msg.chat.id, `✅ 成功上架产品！\n*${catalog[productIndex].name}* 已恢复在网页前端的显示，爬虫正在努力监测中。`, { parse_mode: 'Markdown' });
@@ -297,8 +296,8 @@ export function initBot() {
       if (urlPidMatch) pids.add(urlPidMatch[1]);
 
       try {
-        const cloudscraper = (await import('cloudscraper')).default;
-        const html = await cloudscraper.get(url);
+        const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+        const html = await resp.text();
         let m;
         const pidRegex = /pid=(\d+)/gi;
         while ((m = pidRegex.exec(html)) !== null) pids.add(m[1]);
@@ -336,7 +335,7 @@ export function initBot() {
           ? `https://app.cloudcone.com/vps/${pid}/create`
           : (url.includes('pid=') || !matched.affBase) ? url : `https://${domain}/cart.php?a=add&pid=${pid}`;
 
-        catalog.push({
+        const newProduct = {
           id,
           provider: matched.provider,
           providerName: matched.providerName,
@@ -348,13 +347,14 @@ export function initBot() {
           outOfStockKeywords: ['Out of Stock', 'out of stock'],
           checkUrl,
           affUrl,
-          isSpecialOffer: true
-        });
+          isSpecialOffer: true,
+          source: 'manual'
+        };
+        db.addProduct(newProduct);
         addedCount++;
       }
 
       if (addedCount > 0) {
-        fs.writeFileSync(path.join(__dirname, 'catalog.json'), JSON.stringify(catalog, null, 2));
         reloadCatalog();
         bot.sendMessage(msg.chat.id,
           `✅ 页面提取成功！已批量上架 **${addedCount}** 款新机器并在后台开启监控！\n` +

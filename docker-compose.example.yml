@@ -7,11 +7,21 @@ services:
     restart: unless-stopped
     ports:
       - "4000:4000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
-      - TG_BOT_TOKEN=YOUR_BOT_TOKEN_HERE
-      - TG_CHANNEL_ID=YOUR_CHANNEL_ID_HERE
-      - TG_ADMIN_ID=YOUR_ADMIN_ID_HERE
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/api/vps/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     volumes:
-      - ./catalog.json:/app/catalog.json
+      - ./data:/app/data
       - ./public:/app/public

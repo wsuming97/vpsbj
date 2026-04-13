@@ -11,8 +11,6 @@ RUN apk add --no-cache \
       harfbuzz \
       ca-certificates \
       ttf-freefont \
-      nodejs \
-      yarn \
       # better-sqlite3 原生模块编译依赖
       build-base \
       python3

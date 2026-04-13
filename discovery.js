@@ -946,7 +946,6 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   console.log(`[Discoverer] 🔍 产品发现引擎启动 — ${new Date().toLocaleString('zh-CN')}`);
   console.log(`[Discoverer] ═══════════════════════════════════════`);
 
-  const catalogPath = path.join(__dirname, 'catalog.json');
   let totalNewCount = 0;
   const newsByProvider = {}; // { providerName: [pid] }
 
@@ -1143,28 +1142,29 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       let realName = cp.contextName;
       let realPrice = cp.contextPrice;
       let promoCode = cp.promoCode;
+      let scrapedDetails = null;
 
       // 如果上下文没提到价格，尝试进产品页面抓一次
       if (!realPrice) {
         const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
         console.log(`[Discoverer]     📝 上下文缺价格，进页面抓: PID=${cp.pid}`);
-        const details = await scrapeProductDetails(browser, productUrl);
+        scrapedDetails = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
-        
-        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+
+        if (scrapedDetails.isInvalid || scrapedDetails.name === '404 Not Found' || scrapedDetails.name === 'Shopping Cart') {
            console.log(`[Discoverer]     🚫 无效页面/已下架，防止产生死链垃圾，跳过`);
-           continue; 
+           continue;
         }
 
-        if (!realName) realName = details.name;
-        realPrice = details.price;
-        if (!promoCode && details.promoCode) promoCode = details.promoCode;
+        if (!realName) realName = scrapedDetails.name;
+        realPrice = scrapedDetails.price;
+        if (!promoCode && scrapedDetails.promoCode) promoCode = scrapedDetails.promoCode;
       }
 
       realName = realName || `${cp.providerName} 新品 (pid=${cp.pid})`;
       realPrice = realPrice || '价格待确认';
       const isAutoLive = realPrice !== '价格待确认';
-      const realCycles = (details && details.billingCycles) ? details.billingCycles : {};
+      const realCycles = (scrapedDetails && scrapedDetails.billingCycles) ? scrapedDetails.billingCycles : {};
 
       const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
       const newEntry = {
