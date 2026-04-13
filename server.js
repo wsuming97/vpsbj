@@ -3,8 +3,9 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { runScraperCycle, stockState, catalog, reloadCatalog } from './scraper.js';
+import { runScraperCycle, stockState, catalog, reloadCatalog, setDiscoveryRunning } from './scraper.js';
 import db from './db.js';
+import eventBus from './eventBus.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,50 @@ app.get('/api/vps/health', (req, res) => {
     uptime: process.uptime(),
     catalogSize: Object.keys(stockState).length
   });
+});
+
+// ── SSE：实时推送库存变化到前端 ──
+const sseClients = new Set();
+
+app.get('/api/sse', (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',  // 禁用 nginx 缓冲
+  });
+  res.flushHeaders();
+
+  // 发送初始完整库存快照
+  const initData = Object.values(stockState).filter(p => !p.isHidden);
+  res.write(`data: ${JSON.stringify({ type: 'init', data: initData })}\n\n`);
+
+  sseClients.add(res);
+
+  // 保活 ping，每 25 秒（防止代理断连）
+  const ping = setInterval(() => res.write(': ping\n\n'), 25000);
+
+  req.on('close', () => {
+    clearInterval(ping);
+    sseClients.delete(res);
+  });
+});
+
+function broadcastSSE(payload) {
+  const msg = `data: ${JSON.stringify(payload)}\n\n`;
+  sseClients.forEach(res => {
+    try { res.write(msg); } catch (_) { sseClients.delete(res); }
+  });
+}
+
+// 监听库存变化事件，广播给所有 SSE 客户端
+eventBus.on('stock:changed', product => {
+  broadcastSSE({ type: 'stock_update', product });
+});
+
+// 每轮扫描完成后广播进度
+eventBus.on('cycle:done', info => {
+  broadcastSSE({ type: 'cycle_done', ...info, ts: new Date().toISOString() });
 });
 
 app.get('/api/vps/stock/:productId', (req, res) => {

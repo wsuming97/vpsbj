@@ -181,15 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderSingleCard(product, index = 0) {
     const clone = template.content.cloneNode(true);
-    
-    // 给第一层 DOM 添加 delay
+
+    // 给卡片根节点打上 data-product-id，供增量更新定位
     const firstElement = clone.firstElementChild;
     if (firstElement) {
-      // 每张卡片延迟递增 50ms (最大 1s 封顶)
-      const delay = Math.min(index * 50, 1000);
+      firstElement.dataset.productId = product.id;
+      // 每张卡片延迟递增 50ms (最大 500ms 封顶，加快体感渲染)
+      const delay = Math.min(index * 50, 500);
       firstElement.style.animationDelay = `${delay}ms`;
     }
-    
+
     clone.querySelector('.provider-badge').textContent = product.providerName;
     clone.querySelector('.product-name').textContent = product.name;
     clone.querySelector('.product-price').textContent = product.price;
@@ -298,29 +299,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Fetch data from backend
+  // ── 增量更新：只更新单张卡片的库存状态，不重绘整个列表 ──
+  function patchCardStock(product) {
+    // 找到已经渲染在 DOM 里的对应卡片
+    const card = grid.querySelector(`[data-product-id="${product.id}"]`);
+    if (!card) return; // 该产品不在当前视图里（被筛选掉了），忽略
+
+    const statusContainer = card.querySelector('.stock-status');
+    const buyBtn = card.querySelector('.btn-buy');
+    if (!statusContainer || !buyBtn) return;
+
+    if (product.inStock === true) {
+      statusContainer.innerHTML = `<span class="status-badge in-stock">✅ 有货</span>`;
+      buyBtn.classList.add('active');
+      buyBtn.href = product.affUrl || product.checkUrl;
+      buyBtn.textContent = '🛒 立即购买';
+      buyBtn.style.pointerEvents = 'auto';
+      // 补货瞬间短暂高亮
+      card.style.transition = 'box-shadow 0.3s ease';
+      card.style.boxShadow = '0 0 0 2px var(--acc-green, #22c55e)';
+      setTimeout(() => { card.style.boxShadow = ''; }, 3000);
+    } else if (product.inStock === null) {
+      statusContainer.innerHTML = `<span class="status-badge checking">⏳ 检测中</span>`;
+      buyBtn.classList.remove('active');
+      buyBtn.textContent = '检测中...';
+      buyBtn.href = '#';
+      buyBtn.style.pointerEvents = 'none';
+    } else {
+      const errorMsg = product.statusMessage?.startsWith('Error') ? '探测异常' : '缺货状态';
+      statusContainer.innerHTML = `<span class="status-badge oos">❌ ${errorMsg}</span>`;
+      buyBtn.classList.remove('active');
+      buyBtn.textContent = '暂时缺货';
+      buyBtn.href = '#';
+      buyBtn.style.pointerEvents = 'none';
+    }
+
+    // 同步内存数据
+    const idx = currentData.findIndex(p => p.id === product.id);
+    if (idx !== -1) {
+      currentData[idx] = { ...currentData[idx], ...product };
+    }
+  }
+
+  // ── Fetch data from backend（全量拉取，用于初始化和手动刷新） ──
   async function fetchData() {
     try {
       btnRefresh.textContent = '刷新中...';
       btnRefresh.disabled = true;
-      
-      // Fetch providers list 
-      const provRes = await fetch('/api/vps/providers');
-      const provJson = await provRes.json();
-      if (provJson.success) {
-        renderFilters(provJson.data);
-      }
 
-      // Fetch stock data
-      const res = await fetch('/api/vps/stock');
-      const json = await res.json();
-      
+      const [provRes, res] = await Promise.all([
+        fetch('/api/vps/providers'),
+        fetch('/api/vps/stock'),
+      ]);
+      const [provJson, json] = await Promise.all([provRes.json(), res.json()]);
+
+      if (provJson.success) renderFilters(provJson.data);
+
       if (json.success) {
         currentData = json.data;
-        // Sort by priority initially
         currentData.sort((a,b) => (a.priority === 'high' ? -1 : 1));
-        
-        lastUpdateEl.textContent = `最后更新于: ${formatTime(json.lastScrapeTime)}`;
+        lastUpdateEl.textContent = `最后更新: ${formatTime(new Date().toISOString())}`;
         renderCards();
       } else {
         throw new Error(json.error || 'Server error');
@@ -333,12 +371,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Initialization
-  fetchData();
-  
-  // Timer for auto-refresh every 2 mins
-  setInterval(fetchData, 120 * 1000);
-  
-  // Manual refresh
+  // ── SSE 实时推送：零延迟接收库存变化 ──
+  let sseRetryTimer = null;
+
+  function connectSSE() {
+    if (sseRetryTimer) { clearTimeout(sseRetryTimer); sseRetryTimer = null; }
+    const es = new EventSource('/api/sse');
+
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+
+        if (msg.type === 'init') {
+          // 初始快照：用 SSE 返回的数据替代 fetch 初始化
+          currentData = msg.data.filter(p => !p.isHidden);
+          currentData.sort((a,b) => (a.priority === 'high' ? -1 : 1));
+
+          // 同时刷新 provider tabs
+          const providerMap = {};
+          currentData.filter(p => p.inStock === true).forEach(p => {
+            providerMap[p.provider] = p.providerName;
+          });
+          renderFilters(Object.entries(providerMap).map(([id, name]) => ({ id, name })));
+
+          renderCards();
+          lastUpdateEl.textContent = `已连接实时推送`;
+
+        } else if (msg.type === 'stock_update') {
+          // 增量更新：只更新这一张卡片
+          patchCardStock(msg.product);
+          lastUpdateEl.textContent = `实时: ${formatTime(new Date().toISOString())}`;
+
+        } else if (msg.type === 'cycle_done') {
+          lastUpdateEl.textContent = `上次扫描: ${formatTime(msg.ts)} (${msg.checked}/${msg.total})`;
+        }
+      } catch (_) {}
+    };
+
+    es.onerror = () => {
+      es.close();
+      // SSE 断开后 5 秒重连
+      sseRetryTimer = setTimeout(() => {
+        connectSSE();
+        fetchData(); // 补一次全量拉取，避免断连期间漏掉变化
+      }, 5000);
+    };
+  }
+
+  // ── Initialization ──
+  connectSSE(); // 优先走 SSE 实时通道
+
+  // SSE 超时兜底：连接建立 3 秒后如果仍无数据，回退到普通 fetch
+  setTimeout(() => {
+    if (currentData.length === 0) fetchData();
+  }, 3000);
+
+  // 5 分钟兜底轮询（防止 SSE 数据长期不更新）
+  setInterval(() => {
+    if (currentData.length > 0) return; // SSE 正常工作则不轮询
+    fetchData();
+  }, 5 * 60 * 1000);
+
+  // Manual refresh（始终走全量拉取，用于用户主动刷新）
   btnRefresh.addEventListener('click', fetchData);
 });

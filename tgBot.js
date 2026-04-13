@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import eventBus from './eventBus.js';
 import db from './db.js';
 import { startDiscoveryEngine, runDiscovery } from './discovery.js';
+import { setDiscoveryRunning } from './scraper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -371,13 +372,24 @@ export function initBot() {
     bot.onText(/^\/discover/, async (msg) => {
       if (!requireAdmin(msg)) return;
       bot.sendMessage(msg.chat.id, '🔍 收到指令，正在启动产品发现引擎（需 Puppeteer 逐页扫描，预计 3-5 分钟）...');
-      const count = await runDiscovery(bot, msg.chat.id, catalog, reloadCatalog);
-      if (count === 0) bot.sendMessage(msg.chat.id, '✅ 扫描完毕，所有商家官方页面及竞品站均未发现新品。');
+      setDiscoveryRunning(true);
+      try {
+        const count = await runDiscovery(bot, msg.chat.id, catalog, reloadCatalog);
+        if (count === 0) bot.sendMessage(msg.chat.id, '✅ 扫描完毕，所有商家官方页面及竞品站均未发现新品。');
+      } finally {
+        setDiscoveryRunning(false);
+      }
     });
 
     // 启动后台自动发现引擎（每 4 小时自动跑一轮）
     const adminId = process.env.TG_ADMIN_ID || null;
-    startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4);
+    // 包裹 discovery，使其运行时屏蔽 scraper 以节省 CPU
+    const guardedDiscovery = async (...args) => {
+      setDiscoveryRunning(true);
+      try { return await runDiscovery(...args); }
+      finally { setDiscoveryRunning(false); }
+    };
+    startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4, guardedDiscovery);
 
     // 订阅 EventBus 的补货通知
     eventBus.on('restock', (products) => {

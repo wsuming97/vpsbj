@@ -1291,16 +1291,17 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
 // ============================================================
 // 启动定时引擎（集成到 scraper.js 的主循环中使用）
 // ============================================================
-export function startDiscoveryEngine(bot, adminChatId, catalogRef, reloadCatalog, intervalHours = 4) {
+export function startDiscoveryEngine(bot, adminChatId, catalogRef, reloadCatalog, intervalHours = 4, runFn = null) {
+  // runFn 允许调用方传入带互斥锁包装的版本（如 tgBot.js 里的 guardedDiscovery）
+  const doRun = runFn
+    ? () => runFn(bot, adminChatId, catalogRef, reloadCatalog)
+    : () => runDiscovery(bot, adminChatId, catalogRef, reloadCatalog);
+
   // 启动 60 秒后执行首次扫描（给 scraper 先加载完的时间）
-  setTimeout(() => {
-    runDiscovery(bot, adminChatId, catalogRef, reloadCatalog);
-  }, 60 * 1000);
+  setTimeout(doRun, 60 * 1000);
 
   // 定时循环
-  setInterval(() => {
-    runDiscovery(bot, adminChatId, catalogRef, reloadCatalog);
-  }, intervalHours * 60 * 60 * 1000);
+  setInterval(doRun, intervalHours * 60 * 60 * 1000);
 
   console.log(`[Discoverer] 🚀 产品发现引擎已挂载，周期: 每 ${intervalHours} 小时`);
 }
