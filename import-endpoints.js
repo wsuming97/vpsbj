@@ -31,9 +31,10 @@ const endpointsData = {
     { label: '大阪 / IIJ 软银 测试 IP', datacenter: 'Osaka', route: 'IIJ / 软银', type: 'ip', value: '195.245.229.134', official: true, note: '官方测试 IP' },
     { label: '大阪 / LG', datacenter: 'Osaka', route: 'IIJ / 软银', type: 'lg', value: 'https://lg.osaka.ryzen.jp.zgovps.com', official: true, note: '官方 LG' }
   ],
-  cloudcone: [
-    { label: '洛杉矶 / 测试 IP', datacenter: 'Los Angeles', route: 'MultaCom', type: 'ip', value: '173.254.215.111', official: true, note: '官方测试 IP' },
-    { label: '洛杉矶 / LG', datacenter: 'Los Angeles', route: 'MultaCom', type: 'lg', value: 'http://la.lg.cloudc.one/', official: true, note: '官方 LG' }
+  greencloud: [
+    { label: '新加坡 SG / KVM', datacenter: 'Singapore', route: 'KVM / 国际线路', type: 'url', value: 'https://greencloudvps.com/billing/cart.php?gid=5', official: true, note: 'Singapore KVM 列表页，待后续补充专用测试 IP' },
+    { label: '日本 JP / KVM', datacenter: 'Japan', route: 'KVM / 国际线路', type: 'url', value: 'https://greencloudvps.com/billing/cart.php?gid=11', official: true, note: 'Japan KVM 列表页，待后续补充专用测试 IP' },
+    { label: '特价 / 周年庆', datacenter: 'Special Offers', route: 'Promo / Anniversary', type: 'url', value: 'https://greencloudvps.com/billing/promotions.php', official: true, note: '官方促销聚合页' }
   ],
   colocrossing: [
     { label: '洛杉矶 / 测试 IP', datacenter: 'Los Angeles', route: '默认线路', type: 'ip', value: '107.175.180.6', official: true, note: '官方测试 IP' },

@@ -31,9 +31,9 @@ const AFF = {
   bwh: 81381,
   dmit: 16687,
   rn: 19252,
-  cc: 14121,
   colo: 1633,
-  zgo: 912,  // 你的 ZGO 推广 ID
+  zgo: 912,
+  greencloud: 9379,
 };
 
 // ============================================================
@@ -117,23 +117,25 @@ const SCAN_SOURCES = [
     outOfStockKeywords: ['Out of Stock', 'out of stock'],
   },
 
-  // ── CloudCone ──
-  // CloudCone 不使用 WHMCS，URL 格式为 app.cloudcone.com/vps/{id}/create
+  // ── GreenCloud ──
   {
-    provider: 'cloudcone',
-    providerName: 'CloudCone',
-    domain: 'app.cloudcone.com',
-    affParam: `ref=${AFF.cc}`,
-    mode: 'cloudcone-probe',
-    probeRange: 20,  // 从已知最大 ID 向上探测
-    // CloudCone 活动页和促销帖聚合
-    promoPages: [
-      'https://cloudcone.com/offers/',
-      'https://cloudcone.com/easter-sale/',
-      'https://cloudcone.com/black-friday/',
-      'https://cloudcone.com/new-year-sale/',
+    provider: 'greencloud',
+    providerName: 'GreenCloud',
+    domain: 'greencloudvps.com/billing',
+    affParam: `aff=${AFF.greencloud}`,
+    mode: 'gid-scan',
+    gids: [
+      { gid: 1, label: 'Special Offers / Anniversary' },
+      { gid: 5, label: 'Singapore KVM' },
+      { gid: 11, label: 'Japan KVM' },
     ],
-    outOfStockKeywords: ['sold out', 'Sold Out', 'unavailable', 'no longer available'],
+    extraUrls: [
+      { url: 'https://greencloudvps.com/billing/promotions.php', label: '官方 Promotions' },
+      { url: 'https://greencloudvps.com/billing/cart.php?gid=1', label: '特价与周年庆列表' },
+      { url: 'https://greencloudvps.com/billing/cart.php?gid=5', label: 'Singapore KVM' },
+      { url: 'https://greencloudvps.com/billing/cart.php?gid=11', label: 'Japan KVM' },
+    ],
+    outOfStockKeywords: ['Out of Stock', 'out of stock', 'Sold Out', 'sold out'],
   },
 ];
 
@@ -150,18 +152,17 @@ const COMPETITOR_SOURCES = [
   { name: 'VPS交流网', url: 'https://www.vpsjxw.com/', deepScan: true },
   { name: 'RAK VPS', url: 'https://rakvps.com/', deepScan: true },
   // ── VNCoupon 标签页（列表页 → 进入每篇活动详情提取产品链接） ──
-  { name: 'VNCoupon (CloudCone)', url: 'https://vncoupon.com/tag/cloudcone/', deepScan: true },
   { name: 'VNCoupon (RackNerd)', url: 'https://vncoupon.com/tag/racknerd/', deepScan: true },
   { name: 'VNCoupon (DMIT)', url: 'https://vncoupon.com/tag/dmit/', deepScan: true },
+  { name: 'VNCoupon (GreenCloud)', url: 'https://vncoupon.com/tag/greencloud/', deepScan: true },
   // ── VNCoupon 已知的重要活动详情页（直接含产品链接） ──
-  { name: 'VNCoupon CC Hashtag活动', url: 'https://vncoupon.com/cloudcone-hashtag-2026-sale/' },
-  { name: 'VNCoupon CC KVM特价', url: 'https://vncoupon.com/cloudcone-hourly-billed-kvm-offers-semi-managed-cloud-server/' },
   { name: 'VNCoupon RN 新年特价', url: 'https://vncoupon.com/racknerd-new-year-2022-vps-hosting-deals/' },
   { name: 'VNCoupon 便宜VPS列表', url: 'https://vncoupon.com/a-list-of-cheap-vps-hosting-under-12-year/' },
   // ── 商家官方活动页 ──
-  { name: 'CloudCone Offers', url: 'https://cloudcone.com/offers/' },
+  { name: 'GreenCloud Promotions', url: 'https://greencloudvps.com/billing/promotions.php', deepScan: true },
   { name: 'RackNerd Blog', url: 'https://www.racknerd.com/blog/', deepScan: true },
   // ── LowEndTalk / LowEndBox ──
+  { name: 'LowEndTalk GreenCloud', url: 'https://lowendtalk.com/discussions/tagged/greencloud', deepScan: true },
   { name: 'LowEndBox', url: 'https://lowendbox.com/', deepScan: true },
 ];
 
@@ -446,181 +447,6 @@ async function extractPidsFromGidPage(browser, url) {
 }
 
 // ============================================================
-// CloudCone 专用探测：URL 格式为 /vps/{id}/create
-// ============================================================
-async function probeCloudCone(browser, source, catalogRef) {
-  const newProducts = [];
-
-  // ── 方法1：从id递增探测 ──
-  let maxId = 0;
-  catalogRef.forEach(c => {
-    if (c.provider === 'cloudcone' && c.checkUrl) {
-      const m = c.checkUrl.match(/\/vps\/(\d+)\//); 
-      if (m) maxId = Math.max(maxId, parseInt(m[1]));
-    }
-  });
-
-  if (maxId === 0) {
-    // 如果没有已知产品，从 490 开始探测（当前已知有 500）
-    maxId = 490;
-  }
-
-  console.log(`[Discoverer]     ID 探测范围: ${maxId + 1} ~ ${maxId + source.probeRange}`);
-
-  for (let id = maxId + 1; id <= maxId + source.probeRange; id++) {
-    const page = await browser.newPage();
-    try {
-      const url = `https://app.cloudcone.com/vps/${id}/create`;
-      const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await sleep(3000);
-
-      // 检查是否是有效产品页面（非 404 或重定向）
-      if (resp && resp.status() < 400) {
-        const html = await page.content();
-        // CloudCone 页面有价格、配置信息就说明是有效产品，并且排除软 404 (Stack Error)
-        const isSoft404 = html.includes('Stack Error - 404 Not found!') || html.includes('We encountered a problem') || html.includes('404');
-        const hasValidText = html.includes('Create Server') || html.includes('Deploy') || 
-                             html.includes('/month') || html.includes('/yr') ||
-                             html.includes('SSD') || html.includes('RAM');
-        
-        const isValid = !isSoft404 && hasValidText;
-        
-        if (isValid) {
-          console.log(`[Discoverer]     ✅ ID=${id} 存在！`);
-
-          // 提取产品信息
-          const info = await page.evaluate(() => {
-            const result = { name: null, price: null };
-            // CloudCone 页面标题通常在 h1 或 title 中
-            const h1 = document.querySelector('h1');
-            if (h1) result.name = h1.textContent.trim();
-            if (!result.name && document.title) {
-              result.name = document.title.replace(/- CloudCone.*$/i, '').trim();
-            }
-            // 价格
-            const allText = document.body.innerText;
-            const yrMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
-            if (yrMatch) {
-              result.price = `$${yrMatch[1]}/年`;
-            } else {
-              const moMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i);
-              if (moMatch) result.price = `$${moMatch[1]}/月`;
-            }
-            return result;
-          });
-
-          newProducts.push({
-            id: id,
-            name: info.name || `CloudCone VPS #${id}`,
-            price: info.price || '价格待确认',
-          });
-        }
-      }
-    } catch (err) {
-      // 页面加载失败可能是不存在，跳过
-    } finally {
-      await page.close();
-    }
-    await sleep(2000);
-  }
-
-  // ── 方法2：扫描促销页提取产品链接 ──
-  if (source.promoPages) {
-    for (const promoUrl of source.promoPages) {
-      const page = await browser.newPage();
-      let links = [];
-      let promoCode = null;
-      try {
-        console.log(`[Discoverer]   扫描促销页: ${promoUrl}`);
-        await page.goto(promoUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await sleep(4000);
-
-        // CloudCone 促销页链接格式: app.cloudcone.com/vps/{id}/create
-        links = await page.evaluate(() => {
-          const results = [];
-          document.querySelectorAll('a[href*="/vps/"]').forEach(a => {
-            const m = a.href.match(/\/vps\/(\d+)\/(create|buy)/i);
-            if (m) results.push(m[1]);
-          });
-          // 也搜索页面文本中的链接
-          const html = document.body.innerHTML;
-          const regex = /app\.cloudcone\.com\/vps\/(\d+)\//gi;
-          let rm;
-          while ((rm = regex.exec(html)) !== null) results.push(rm[1]);
-          return [...new Set(results)];
-        });
-
-        // 同时尝试提取优惠码
-        promoCode = await page.evaluate(() => {
-          const text = document.body.innerText;
-          const m = text.match(/(?:coupon|promo\s*code|\u4f18\u60e0\u7801|\u6298\u6263\u7801)[:\s\uff1a]+([A-Z0-9_-]{3,30})/i);
-          return m ? m[1] : null;
-        });
-        console.log(`[Discoverer]     提取到 ${links.length} 个潜在链接，开始验证...`);
-      } catch (err) {
-        console.log(`[Discoverer]     ⚠️ 促销页扫描失败: ${err.message}`);
-      } finally {
-        await page.close();
-      }
-
-      // 验证链接：如果不验证，会把失效的 Oops 页面当做新品塞进数据库
-      for (const vid of links) {
-        const alreadyFound = newProducts.some(p => p.id == vid);
-        if (alreadyFound) {
-            // 已找到的产品如果有优惠码则补充
-            const p = newProducts.find(x => x.id == vid);
-            if (p && promoCode && !p.promoCode) p.promoCode = promoCode;
-            continue;
-        }
-
-        const vpage = await browser.newPage();
-        try {
-          const url = `https://app.cloudcone.com/vps/${vid}/create`;
-          await vpage.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-          await sleep(3000);
-          
-          const html = await vpage.content();
-          const isSoft404 = html.includes('Oops') || html.includes('problem') || html.includes('not found') || html.includes('invalid') || html.includes('Out of Stock') || html.includes('Sold Out');
-          const hasValidText = html.includes('Deploy') || html.includes('Order') || html.includes('Pricing') || html.includes('/mo') || html.includes('/yr') || html.includes('SSD') || html.includes('RAM');
-          
-          if (!isSoft404 && hasValidText) {
-            const info = await vpage.evaluate(() => {
-              const result = { name: null, price: null };
-              const h1 = document.querySelector('h1');
-              if (h1) result.name = h1.textContent.trim();
-              if (!result.name && document.title) result.name = document.title.replace(/- CloudCone.*$/i, '').trim();
-              
-              const allText = document.body.innerText;
-              const yrMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
-              if (yrMatch) result.price = `$${yrMatch[1]}/年`;
-              else {
-                const moMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i);
-                if (moMatch) result.price = `$${moMatch[1]}/月`;
-              }
-              return result;
-            });
-            console.log(`[Discoverer]     ✅ 验证通过 VPS ID=${vid}`);
-            newProducts.push({
-              id: parseInt(vid),
-              name: info.name || `CloudCone VPS #${vid}`,
-              price: info.price || '价格待确认',
-              promoCode: promoCode,
-            });
-          } else {
-             console.log(`[Discoverer]     🚫 页面失效或拦截 ID=${vid}`);
-          }
-        } catch (err) { } finally {
-          await vpage.close();
-        }
-      }
-      await sleep(2000);
-    }
-  }
-
-  return newProducts;
-}
-
-// ============================================================
 // PID 递增探测：从已知最大 PID 开始向上试探
 // ============================================================
 async function probePids(browser, source, catalogRef) {
@@ -684,7 +510,7 @@ async function probePids(browser, source, catalogRef) {
 
 // ============================================================
 // 从竞品库存站/测评站智能提取产品信息（cheerio DOM 解析）
-// 返回 [{ pid, provider, providerName, domain, contextName, contextPrice, promoCode, isCloudCone }]
+// 返回 [{ pid, provider, providerName, domain, contextName, contextPrice, promoCode }]
 // ============================================================
 async function extractFromCompetitorSites() {
   const allPids = [];
@@ -700,6 +526,7 @@ async function extractFromCompetitorSites() {
     'my.racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', domain: 'my.racknerd.com' },
     'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', domain: 'cloud.colocrossing.com' },
     'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', domain: 'clients.zgovps.com' },
+    'greencloudvps.com': { provider: 'greencloud', providerName: 'GreenCloud', domain: 'greencloudvps.com/billing' },
   };
 
   /**
@@ -826,24 +653,6 @@ async function extractFromCompetitorSites() {
             }
           }
 
-          // ── CloudCone 格式: app.cloudcone.com/vps/{id}/create ──
-          const ccMatch = href.match(/app\.cloudcone\.com\/vps\/(\d+)\/(create|buy)/i);
-          if (ccMatch) {
-            const ccId = ccMatch[1];
-            const dedup = `cloudcone-${ccId}`;
-            if (!seen.has(dedup)) {
-              seen.add(dedup);
-              const ctx = extractContext(p$, el);
-              allPids.push({
-                pid: ccId,
-                provider: 'cloudcone',
-                providerName: 'CloudCone',
-                domain: 'app.cloudcone.com',
-                isCloudCone: true,
-                ...ctx,
-              });
-            }
-          }
         });
       }
 
@@ -869,7 +678,7 @@ async function extractFromCompetitorSites() {
               const linkText = $(el).text().toLowerCase();
               const pathLower = u.pathname.toLowerCase();
               const isRelevant =
-                /cloudcone|racknerd|dmit|bandwagon|colocross|zgo/i.test(pathLower + ' ' + linkText) ||
+                /greencloud|racknerd|dmit|bandwagon|colocross|zgo/i.test(pathLower + ' ' + linkText) ||
                 /sale|deal|promo|offer|coupon|cheap|\$\d|flash|special|holiday|christmas|easter|black.?friday|new.?year|hashtag/i.test(pathLower + ' ' + linkText);
               if (isRelevant) {
                 articleLinks.add(u.href);
@@ -957,43 +766,6 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           console.log(`[Discoverer]     提取到 ${pids.size} 个 PID`);
           await sleep(2000);
         }
-      } else if (source.mode === 'cloudcone-probe') {
-        // CloudCone 专用探测
-        const ccProducts = await probeCloudCone(browser, source, catalogRef);
-        
-        for (const cc of ccProducts) {
-          const ccId = `cloudcone-auto-${cc.id}`;
-          const exists = catalogRef.some(c =>
-            c.id === ccId ||
-            (c.provider === 'cloudcone' && c.checkUrl && c.checkUrl.includes(`/vps/${cc.id}/`))
-          );
-
-          if (!exists) {
-            const newEntry = {
-              id: ccId,
-              provider: 'cloudcone',
-              providerName: 'CloudCone',
-              name: cc.name,
-              price: cc.price,
-              promoCode: cc.promoCode || null,
-              specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
-              datacenters: ['待确认'],
-              networkRoutes: ['普通线路'],
-              outOfStockKeywords: source.outOfStockKeywords,
-              checkUrl: `https://app.cloudcone.com/vps/${cc.id}/create`,
-              affUrl: `https://app.cloudcone.com/vps/${cc.id}/create?${source.affParam}${cc.promoCode ? '&token=' + cc.promoCode : ''}`,
-              isSpecialOffer: true,
-              source: 'discovered'
-            };
-            db.addProduct(newEntry);
-            catalogRef.push(newEntry);
-            totalNewCount++;
-            if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
-            newsByProvider['CloudCone'].push(cc.id);
-            console.log(`[Discoverer]   🆕 新品: CloudCone ID=${cc.id} (${cc.name})`);
-          }
-        }
-        continue; // CloudCone 已在内部处理完 diff，跳过后面通用的 WHMCS diff 逻辑
       }
     } catch (err) {
       console.error(`[Discoverer]   ❌ ${source.providerName} 扫描异常: ${err.message}`);
@@ -1024,6 +796,11 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         const realPrice = details.price || '价格待确认';
         console.log(`[Discoverer]     → 名称: ${realName}, 价格: ${realPrice}`);
 
+        const promoSuffix = details.promoCode ? `&promocode=${encodeURIComponent(details.promoCode)}` : '';
+        const affUrl = source.provider === 'greencloud'
+          ? `https://${source.domain}/cart.php?a=add&pid=${pid}&${source.affParam}${promoSuffix}`
+          : `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}${promoSuffix}`;
+
         const newEntry = {
           id: `${source.provider}-auto-${pid}`,
           provider: source.provider,
@@ -1037,7 +814,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
           networkRoutes: ['待确认'],
           outOfStockKeywords: source.outOfStockKeywords || ['Out of Stock', 'out of stock'],
           checkUrl: productUrl,
-          affUrl: `https://${source.domain}/aff.php?${source.affParam}&pid=${pid}${details.promoCode ? '&promocode=' + details.promoCode : ''}`,
+          affUrl,
           isSpecialOffer: true,
           source: 'discovered'
         };
@@ -1058,40 +835,23 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   let pendingCount = 0;  // 待确认数
 
   for (const cp of competitorPids) {
-    // ── CloudCone 分支 ──
-    if (cp.isCloudCone) {
-      const ccId = `cloudcone-auto-${cp.pid}`;
-      const ccExists = catalogRef.some(c =>
-        c.id === ccId ||
-        (c.provider === 'cloudcone' && c.checkUrl && c.checkUrl.includes(`/vps/${cp.pid}/`))
-      );
-      if (!ccExists) {
-        // 优先用上下文提取到的名称和价格
-        const name = cp.contextName || `CloudCone VPS #${cp.pid}`;
-        const price = cp.contextPrice || '价格待确认';
-        const isAutoLive = price !== '价格待确认';
+    // ── 通用 WHMCS 商家分支 ──
+    if (cp.provider === 'cloudcone') continue;
 
-        const newEntry = {
-          id: ccId, provider: 'cloudcone', providerName: 'CloudCone',
-          name, price, promoCode: cp.promoCode || null,
-          specs: { cpu: '待确认', ram: '待确认', disk: '待确认', bandwidth: '待确认' },
-          datacenters: ['待确认'], networkRoutes: ['普通线路'],
-          outOfStockKeywords: ['sold out', 'Sold Out', 'unavailable'],
-          checkUrl: `https://app.cloudcone.com/vps/${cp.pid}/create`,
-          affUrl: `https://app.cloudcone.com/vps/${cp.pid}/create?ref=${AFF.cc}`,
-          isSpecialOffer: true,
-          source: 'discovered'
-        };
-        db.addProduct(newEntry);
-        catalogRef.push(newEntry);
-        totalNewCount++;
-        if (isAutoLive) autoLiveCount++; else pendingCount++;
-        if (!newsByProvider['CloudCone']) newsByProvider['CloudCone'] = [];
-        newsByProvider['CloudCone'].push({ pid: cp.pid, name, price, autoLive: isAutoLive });
-        console.log(`[Discoverer]   🆕 ${isAutoLive ? '✅ 直接上架' : '⏳ 待确认'}: CloudCone ID=${cp.pid} → ${name} ${price}`);
-      }
-      continue;
+    // ── 通用 WHMCS 商家分支 ──
+    if (cp.provider === 'greencloud') {
+      cp.domain = 'greencloudvps.com/billing';
     }
+
+    const buildWhmcsAffUrl = (domain, affParam, pid, promoCode) => {
+      if (cp.provider === 'greencloud') {
+        const promo = promoCode ? `&promocode=${encodeURIComponent(promoCode)}` : '';
+        return `https://${domain}/cart.php?a=add&pid=${pid}&${affParam}${promo}`;
+      }
+      return affParam
+        ? `https://${domain}/aff.php?${affParam}&pid=${pid}${promoCode ? '&promocode=' + promoCode : ''}`
+        : `https://${domain}/cart.php?a=add&pid=${pid}`;
+    };
 
     // ── 通用 WHMCS 商家分支 ──
     const exists = catalogRef.some(c =>
@@ -1147,9 +907,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         networkRoutes: ['待确认'],
         outOfStockKeywords: ['Out of Stock', 'out of stock'],
         checkUrl: productUrl,
-        affUrl: affParam
-          ? `https://${cp.domain}/aff.php?${affParam}&pid=${cp.pid}${promoCode ? '&promocode=' + promoCode : ''}`
-          : productUrl,
+        affUrl: buildWhmcsAffUrl(cp.domain, affParam, cp.pid, promoCode),
         isSpecialOffer: true,
         source: 'discovered'
       };
@@ -1180,64 +938,31 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       }
       try {
         console.log(`[Discoverer]   🔁 重试: ${item.id}`);
-        if (item.provider === 'cloudcone') {
-          const page = await browser.newPage();
-          try {
-            await page.goto(item.checkUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-            await sleep(4000);
-            const info = await page.evaluate(() => {
-              const r = { name: null, price: null, isInvalid: false };
-              const t = document.body.innerText;
-              if (t.includes('Stack Error - 404 Not found!') || t.includes('We encountered a problem') || t.includes('404')) {
-                 r.isInvalid = true;
-                 return r;
-              }
-              const h1 = document.querySelector('h1');
-              if (h1) r.name = h1.textContent.trim();
-              if (!r.name && document.title) r.name = document.title.replace(/- CloudCone.*$/i, '').trim();
-              const yr = t.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
-              if (yr) r.price = `$${yr[1]}/年`;
-              else { const mo = t.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i); if (mo) r.price = `$${mo[1]}/月`; }
-              return r;
-            });
-            
-            if (info.isInvalid) {
-              item.isHidden = true;
-              db.updateProduct(item.id, { isHidden: true });
-              console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
-            } else if (info.price) {
-              const updates = { price: info.price };
-              if (info.name && item.name.includes('#')) updates.name = info.name;
-              item.price = info.price;
-              if (updates.name) item.name = updates.name;
-              db.updateProduct(item.id, updates);
-              retryFixed++;
-              console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
-            }
-          } finally { await page.close(); }
-        } else {
-          const details = await scrapeProductDetails(browser, item.checkUrl);
-          if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
-             item.isHidden = true;
-             db.updateProduct(item.id, { isHidden: true });
-             console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
-          } else if (details.price && details.price !== '价格待确认') {
-            const updates = { price: details.price };
-            item.price = details.price;
-            if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) {
-              updates.name = details.name;
-              item.name = details.name;
-            }
-            if (details.promoCode && !item.promoCode) {
-              updates.promoCode = details.promoCode;
-              item.promoCode = details.promoCode;
-            }
-            db.updateProduct(item.id, updates);
-            retryFixed++;
-            console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
-          } else {
-            console.log(`[Discoverer]     ❌ 仍无法获取价格`);
+        const details = await scrapeProductDetails(browser, item.checkUrl);
+        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
+           item.isHidden = true;
+           db.updateProduct(item.id, { isHidden: true });
+           console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
+        } else if (details.price && details.price !== '价格待确认') {
+          const updates = { price: details.price };
+          item.price = details.price;
+          if (details.name && (item.name.includes('新品') || item.name.includes('自动发现'))) {
+            updates.name = details.name;
+            item.name = details.name;
           }
+          if (details.promoCode && !item.promoCode) {
+            updates.promoCode = details.promoCode;
+            item.promoCode = details.promoCode;
+          }
+          if (details.billingCycles && Object.keys(details.billingCycles).length > 0) {
+            updates.billingCycles = details.billingCycles;
+            item.billingCycles = details.billingCycles;
+          }
+          db.updateProduct(item.id, updates);
+          retryFixed++;
+          console.log(`[Discoverer]     ✅ 补全: ${item.name} → ${item.price}`);
+        } else {
+          console.log(`[Discoverer]     ❌ 仍无法获取价格`);
         }
         await sleep(2000);
       } catch (err) {

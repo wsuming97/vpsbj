@@ -258,8 +258,8 @@ export function initBot() {
       'racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
       'my.racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
       'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', affBase: 'https://clients.zgovps.com/aff.php?aff=912&pid=' },
-      'cloudcone.com': { provider: 'cloudcone', providerName: 'CloudCone', affBase: null },   // CloudCone 用 ref= 格式，特殊处理
-      'app.cloudcone.com': { provider: 'cloudcone', providerName: 'CloudCone', affBase: null },
+      'greencloudvps.com': { provider: 'greencloud', providerName: 'GreenCloud', affBase: 'https://greencloudvps.com/billing/cart.php?a=add&pid=' },
+      'billing.greencloudvps.com': { provider: 'greencloud', providerName: 'GreenCloud', affBase: 'https://greencloudvps.com/billing/cart.php?a=add&pid=' },
       'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', affBase: 'https://cloud.colocrossing.com/aff.php?aff=1633&pid=' },
     };
 
@@ -306,11 +306,6 @@ export function initBot() {
         const inputRegex = /<input[^>]*name=["']id["'][^>]*value=["'](\d+)["']/gi;
         while ((m = inputRegex.exec(html)) !== null) pids.add(m[1]);
 
-        const ccRegex = /(?:cloudcone\.com(?:\.cn)?\/(?:vps|compute)\/(\d+)\/create)/gi;
-        while ((m = ccRegex.exec(html)) !== null) {
-          pids.add(m[1]);
-          matched = { provider: 'cloudcone', providerName: 'CloudCone', affBase: null };
-        }
       } catch (err) {
         console.log('[tgBot /add] 智能提取页面失败 (可能触发CF拦截):', err.message);
       }
@@ -326,14 +321,13 @@ export function initBot() {
         if (exists) continue;
 
         let affUrl = url;
-        if (matched.affBase) {
+        if (matched.provider === 'greencloud') {
+          affUrl = `${matched.affBase}${pid}&aff=9379`;
+        } else if (matched.affBase) {
           affUrl = matched.affBase + pid;
-        } else if (matched.provider === 'cloudcone') {
-          // CloudCone 用 ref= 参数，URL 格式为 /vps/{id}/create?ref=...
-          affUrl = `https://app.cloudcone.com/vps/${pid}/create?ref=14121`;
         }
-        let checkUrl = matched.provider === 'cloudcone'
-          ? `https://app.cloudcone.com/vps/${pid}/create`
+        let checkUrl = matched.provider === 'greencloud'
+          ? `https://greencloudvps.com/billing/cart.php?a=add&pid=${pid}`
           : (url.includes('pid=') || !matched.affBase) ? url : `https://${domain}/cart.php?a=add&pid=${pid}`;
 
         const newProduct = {

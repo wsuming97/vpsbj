@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // 对特价区商家进行过滤与排位：仅展示高优商家，或将杂牌沉底
-      const priority = ['DMIT', '搬瓦工', 'RackNerd', 'CloudCone', 'ColoCrossing', 'ZGO Cloud'];
+      const priority = ['DMIT', '搬瓦工', 'RackNerd', 'GreenCloud', 'ColoCrossing', 'ZGO Cloud'];
       const sortedProviders = Object.keys(grouped).sort((a, b) => {
         const idxA = priority.indexOf(a);
         const idxB = priority.indexOf(b);
@@ -425,11 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentData.length === 0) fetchData();
   }, 3000);
 
-  // 5 分钟兜底轮询（防止 SSE 数据长期不更新）
+  // 2 分钟兜底轮询（防止 SSE 数据由于网络断开导致不更新）
   setInterval(() => {
-    if (currentData.length > 0) return; // SSE 正常工作则不轮询
-    fetchData();
-  }, 5 * 60 * 1000);
+    fetchData(); // 强制每2分钟刷新一次，保持和UI文案一致
+  }, 2 * 60 * 1000);
 
   // Manual refresh（始终走全量拉取，用于用户主动刷新）
   btnRefresh.addEventListener('click', fetchData);

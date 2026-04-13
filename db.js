@@ -332,6 +332,15 @@ function deleteProduct(id) {
   db.prepare('DELETE FROM products WHERE id = ?').run(id);
 }
 
+/** 按商家批量更新产品 */
+function updateProductsByProvider(provider, updates) {
+  const rows = db.prepare('SELECT id FROM products WHERE provider = ?').all(provider);
+  for (const row of rows) {
+    updateProduct(row.id, updates);
+  }
+  return rows.length;
+}
+
 // ============================================================
 // 历史记录
 // ============================================================
@@ -402,6 +411,7 @@ export default {
   isLocked,
   addProduct,
   updateProduct,
+  updateProductsByProvider,
   deleteProduct,
   recordPriceChange,
   recordStockEvent,
