@@ -545,13 +545,15 @@ async function probeCloudCone(browser, source, catalogRef) {
   if (source.promoPages) {
     for (const promoUrl of source.promoPages) {
       const page = await browser.newPage();
+      let links = [];
+      let promoCode = null;
       try {
         console.log(`[Discoverer]   扫描促销页: ${promoUrl}`);
         await page.goto(promoUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
         await sleep(4000);
 
         // CloudCone 促销页链接格式: app.cloudcone.com/vps/{id}/create
-        const links = await page.evaluate(() => {
+        links = await page.evaluate(() => {
           const results = [];
           document.querySelectorAll('a[href*="/vps/"]').forEach(a => {
             const m = a.href.match(/\/vps\/(\d+)\/(create|buy)/i);
@@ -566,33 +568,67 @@ async function probeCloudCone(browser, source, catalogRef) {
         });
 
         // 同时尝试提取优惠码
-        const promoCode = await page.evaluate(() => {
+        promoCode = await page.evaluate(() => {
           const text = document.body.innerText;
           const m = text.match(/(?:coupon|promo\s*code|\u4f18\u60e0\u7801|\u6298\u6263\u7801)[:\s\uff1a]+([A-Z0-9_-]{3,30})/i);
           return m ? m[1] : null;
         });
-
-        for (const vid of links) {
-          const alreadyFound = newProducts.some(p => p.id == vid);
-          if (!alreadyFound) {
-            newProducts.push({
-              id: parseInt(vid),
-              name: `CloudCone VPS #${vid}`,
-              price: '价格待确认',
-              promoCode: promoCode,
-            });
-          } else if (promoCode) {
-            // 已找到的产品补充优惠码
-            const p = newProducts.find(x => x.id == vid);
-            if (p && !p.promoCode) p.promoCode = promoCode;
-          }
-        }
-
-        console.log(`[Discoverer]     提取到 ${links.length} 个产品链接${promoCode ? ', 优惠码: ' + promoCode : ''}`);
+        console.log(`[Discoverer]     提取到 ${links.length} 个潜在链接，开始验证...`);
       } catch (err) {
         console.log(`[Discoverer]     ⚠️ 促销页扫描失败: ${err.message}`);
       } finally {
         await page.close();
+      }
+
+      // 验证链接：如果不验证，会把失效的 Oops 页面当做新品塞进数据库
+      for (const vid of links) {
+        const alreadyFound = newProducts.some(p => p.id == vid);
+        if (alreadyFound) {
+            // 已找到的产品如果有优惠码则补充
+            const p = newProducts.find(x => x.id == vid);
+            if (p && promoCode && !p.promoCode) p.promoCode = promoCode;
+            continue;
+        }
+
+        const vpage = await browser.newPage();
+        try {
+          const url = `https://app.cloudcone.com/vps/${vid}/create`;
+          await vpage.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+          await sleep(3000);
+          
+          const html = await vpage.content();
+          const isSoft404 = html.includes('Oops') || html.includes('problem') || html.includes('not found') || html.includes('invalid') || html.includes('Out of Stock') || html.includes('Sold Out');
+          const hasValidText = html.includes('Deploy') || html.includes('Order') || html.includes('Pricing') || html.includes('/mo') || html.includes('/yr') || html.includes('SSD') || html.includes('RAM');
+          
+          if (!isSoft404 && hasValidText) {
+            const info = await vpage.evaluate(() => {
+              const result = { name: null, price: null };
+              const h1 = document.querySelector('h1');
+              if (h1) result.name = h1.textContent.trim();
+              if (!result.name && document.title) result.name = document.title.replace(/- CloudCone.*$/i, '').trim();
+              
+              const allText = document.body.innerText;
+              const yrMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*yr/i);
+              if (yrMatch) result.price = `$${yrMatch[1]}/年`;
+              else {
+                const moMatch = allText.match(/\$(\d+[.,]\d{2})\s*\/\s*mo/i);
+                if (moMatch) result.price = `$${moMatch[1]}/月`;
+              }
+              return result;
+            });
+            console.log(`[Discoverer]     ✅ 验证通过 VPS ID=${vid}`);
+            newProducts.push({
+              id: parseInt(vid),
+              name: info.name || `CloudCone VPS #${vid}`,
+              price: info.price || '价格待确认',
+              promoCode: promoCode,
+            });
+          } else {
+             console.log(`[Discoverer]     🚫 页面失效或拦截 ID=${vid}`);
+          }
+        } catch (err) { } finally {
+          await vpage.close();
+        }
       }
       await sleep(2000);
     }
