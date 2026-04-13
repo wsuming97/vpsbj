@@ -847,8 +847,8 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         catalogRef.push(newEntry);
         totalNewCount++;
         if (!newsByProvider[source.providerName]) newsByProvider[source.providerName] = [];
-        newsByProvider[source.providerName].push(pid);
-        console.log(`[Discoverer]   🆕 新品: ${source.providerName} PID=${pid}`);
+        newsByProvider[source.providerName].push({ pid, name: realName, price: realPrice, autoLive: realPrice !== '价格待确认' });
+        console.log(`[Discoverer]   🆕 新品: ${source.providerName} PID=${pid} → ${realName} ${realPrice}`);
     }
   }
 
@@ -1017,10 +1017,6 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         for (const item of (Array.isArray(items) && typeof items[0] === 'object' ? items : [])) {
           const icon = item.autoLive ? '✅' : '⏳';
           msg += `   ${icon} ${item.name} — ${item.price}\n`;
-        }
-        // 兼容旧格式（纯 pid 数组，来自第一层 WHMCS 扫描）
-        if (Array.isArray(items) && items.length > 0 && typeof items[0] !== 'object') {
-          msg += `   PID: ${items.join(', ')}\n`;
         }
         msg += `\n`;
       }
