@@ -17,6 +17,16 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// ── 一次性迁移：清除已废弃商家 CloudCone 的全部数据 ──
+{
+  const ccProducts = db.db.prepare("SELECT id FROM products WHERE provider = 'cloudcone'").all();
+  if (ccProducts.length > 0) {
+    for (const p of ccProducts) db.purgeProduct(p.id);
+    reloadCatalog();
+    console.log(`[Migration] 🧹 已清除 ${ccProducts.length} 个废弃 CloudCone 产品并拉黑`);
+  }
+}
+
 // Public API endpoints
 app.get('/api/vps/stock', (req, res) => {
   // 网页前端只显示有货的产品（非隐藏 + inStock === true）

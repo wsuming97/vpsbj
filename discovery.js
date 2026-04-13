@@ -36,17 +36,6 @@ const AFF = {
 // 每个源包含：商家信息 + 要扫描的 WHMCS gid 列表 + 官方域名
 // ============================================================
 const SCAN_SOURCES = [
-  // ── CloudCone（已停用，保留配置仅作审计参考） ──
-  // {
-  //   provider: 'cloudcone',
-  //   providerName: 'CloudCone',
-  //   domain: 'app.cloudcone.com',
-  //   affParam: '',
-  //   mode: 'pid-probe',
-  //   probeRange: 20,
-  //   outOfStockKeywords: ['Out of Stock', 'out of stock', 'Sold Out', 'sold out'],
-  // },
-
   // ── 搬瓦工 ──
   // 搬瓦工不使用标准 gid 列表页，而是每个 PID 独立页面
   // 因此搬瓦工的新品发现依赖竞品库存站 + PID 递增探测
@@ -150,10 +139,6 @@ const SCAN_SOURCES = [
 // 这些站点会汇总各商家最新活动链接，从中提取 pid 和产品链接
 // ============================================================
 const COMPETITOR_SOURCES = [
-  // ── CloudCone（已停用，保留辅助源仅作审计参考） ──
-  // { name: 'CloudCone Promotions', url: 'https://app.cloudcone.com/compute/marketplace', deepScan: true },
-  // { name: 'LowEndTalk CloudCone', url: 'https://lowendtalk.com/discussions/tagged/cloudcone', deepScan: true },
-
   // ── 库存站 ──
   { name: '搬瓦工库存站 (bwh91)', url: 'https://stock.bwh91.com/' },
   { name: 'DMIT库存站 (dmitea)', url: 'https://stock.dmitea.com/' },
@@ -860,8 +845,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
   let pendingCount = 0;  // 待确认数
 
   for (const cp of competitorPids) {
-    // ── 通用 WHMCS 商家分支 ──
-    if (cp.provider === 'cloudcone') continue;
+
 
     const buildWhmcsAffUrl = (domain, affParam, pid, promoCode) => {
       if (cp.provider === 'greencloud') {
