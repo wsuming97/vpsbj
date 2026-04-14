@@ -362,6 +362,11 @@ function updateProductsByProvider(provider, updates) {
   return rows.length;
 }
 
+/** 按商家获取产品列表（返回简化的 { id, provider } 对象数组） */
+function getProductsByProvider(provider) {
+  return db.prepare('SELECT id, provider FROM products WHERE provider = ?').all(provider);
+}
+
 // ============================================================
 // 历史记录
 // ============================================================
@@ -424,7 +429,7 @@ initDB();
 // 导出
 // ============================================================
 export default {
-  db,               // 原始 db 实例（高级用途）
+  // 原始 db 实例不再直接导出，所有操作应通过封装方法
   getAllProducts,
 
   getProduct,
@@ -433,6 +438,7 @@ export default {
   addProduct,
   updateProduct,
   updateProductsByProvider,
+  getProductsByProvider,
   deleteProduct,
   purgeProduct,
   isIdPurged,

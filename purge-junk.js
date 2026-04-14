@@ -12,8 +12,10 @@
  *   4. 输出清理报告
  */
 import db from './db.js';
+import { JUNK_NAME_RE } from './constants.js';
 
-const JUNK_PATTERNS = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg|just a moment|checking your browser|cloudflare|stack error|encountered a problem|SSL Certificate|Addon|Extra IP|Dedicated Server|Domain Registration|非VPS产品自动拦截/i;
+// 垃圾正则统一来自 constants.js（唯一 truth source）
+const JUNK_PATTERNS = JUNK_NAME_RE;
 
 const allProducts = db.getAllProducts();
 

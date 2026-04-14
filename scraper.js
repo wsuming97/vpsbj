@@ -176,6 +176,8 @@ async function processCheckResult(product, result, restockedProducts) {
       console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
 
       // ── 补货瞬间：实时抓取最新价格 ──
+      // TODO: 以下价格解析逻辑与 discovery.js scrapeProductDetails 高度重复，
+      //       待后续重构时提取为共享函数（当前不动以避免引入风险）
       let livePrice = null;
       let liveCycles = null;
       const oldPrice = product.price;

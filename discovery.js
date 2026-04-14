@@ -16,25 +16,11 @@ import * as cheerio from 'cheerio';
 import db from './db.js';
 // 共享 Chromium 单例，与 scraper.js 复用同一进程
 import { getBrowser } from './browser.js';
+import { JUNK_NAME_RE, AFF } from './constants.js';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ============================================================
-// 垃圾名称正则（唯一 truth source，所有检查点统一引用）
-// ============================================================
-const JUNK_NAME_RE = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg|just a moment|checking your browser|cloudflare|stack error|encountered a problem|SSL Certificate|Addon|Extra IP|Dedicated Server|Domain Registration/i;
-
-// ============================================================
-// 推广 ID
-// ============================================================
-const AFF = {
-  bwh: 81381,
-  dmit: 16687,
-  rn: 19252,
-  colo: 1633,
-  zgo: 912,
-  greencloud: 9379,
-};
+// 垃圾名称正则和推广 ID 统一来自 constants.js（唯一 truth source）
 
 // ============================================================
 // 扫描源定义

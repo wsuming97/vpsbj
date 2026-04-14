@@ -1,0 +1,7 @@
+https://github.com/ljnchn/NodeSeeker - NodeSeek RSS 监控，telegram bot 推送，单用户版
+https://github.com/AI-XMLY/nodeseek-rss-telegram-bot - RSS to Telegram bot with keyword filtering, multi-user subscriptions, SQLite and Docker support
+https://github.com/LonelyRyF/NodeSeek-Bot - NodeSeek Telegram 验证机器人 - 通过 NodeSeek 论坛私信验证 Telegram 用户身份
+https://github.com/n-AChegYag/nodeseek-keywords - Telegram bot that monitors NodeSeek forum for new posts matching keywords via RSS
+https://github.com/xymn2023/rss_nodeseek - 这是一个RSS监控程序，可以监控nodeseek论坛RSS源的更新并通过Telegram发送通知。
+https://github.com/Z1rconium/NodeSeek-Rulings-Search - 🔍 专注于 NodeSeek 论坛管理记录（Ruling）的抓取与查询工具。支持 Telegram Bot 交互、自动定时抓取、精确/模糊搜索及操作详情自动翻译，内置 SQLite 存储与频率限制。
+https://github.com/theslugger/ns-seek - NodeSeek 管理记录采集、存储与查询系统（Telegram Bot + HTTP API + 增量同步）

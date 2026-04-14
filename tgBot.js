@@ -5,6 +5,7 @@ import eventBus from './eventBus.js';
 import db from './db.js';
 import { startDiscoveryEngine, runDiscovery } from './discovery.js';
 import { setDiscoveryRunning } from './scraper.js';
+import { matchProvider } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -196,16 +197,18 @@ export function initBot() {
       if (!requireAdmin(msg)) return;
 
       const id = match[1].trim();
-      const productIndex = catalog.findIndex(p => p.id === id);
+      const product = catalog.find(p => p.id === id);
 
-      if (productIndex === -1) {
+      if (!product) {
         return bot.sendMessage(msg.chat.id, `⚠️ 找不到 ID 为 \`${id}\` 的产品。\n提示：请使用 /list 查看确切的 ID。`, { parse_mode: 'Markdown' });
       }
 
+      // 先缓存产品名称，因为 reloadCatalog 会重建 catalog 数组
+      const productName = product.name;
       db.updateProduct(id, { isHidden: true });
       reloadCatalog();
 
-      bot.sendMessage(msg.chat.id, `✅ 成功下架产品！\n*${catalog[productIndex].name}* 已从网页前端隐藏，爬虫也已停止对此产品的监控。`, { parse_mode: 'Markdown' });
+      bot.sendMessage(msg.chat.id, `✅ 成功下架产品！\n*${productName}* 已从网页前端隐藏，爬虫也已停止对此产品的监控。`, { parse_mode: 'Markdown' });
     });
 
     // /on <id> command
@@ -213,16 +216,18 @@ export function initBot() {
       if (!requireAdmin(msg)) return;
 
       const id = match[1].trim();
-      const productIndex = catalog.findIndex(p => p.id === id);
+      const product = catalog.find(p => p.id === id);
 
-      if (productIndex === -1) {
+      if (!product) {
         return bot.sendMessage(msg.chat.id, `⚠️ 找不到 ID 为 \`${id}\` 的产品。\n提示：请使用 /list 查看确切的 ID。`, { parse_mode: 'Markdown' });
       }
 
+      // 先缓存产品名称，因为 reloadCatalog 会重建 catalog 数组
+      const productName = product.name;
       db.updateProduct(id, { isHidden: false });
       reloadCatalog();
 
-      bot.sendMessage(msg.chat.id, `✅ 成功上架产品！\n*${catalog[productIndex].name}* 已恢复在网页前端的显示，爬虫正在努力监测中。`, { parse_mode: 'Markdown' });
+      bot.sendMessage(msg.chat.id, `✅ 成功上架产品！\n*${productName}* 已恢复在网页前端的显示，爬虫正在努力监测中。`, { parse_mode: 'Markdown' });
     });
 
     // /status command — 增强版系统状态
@@ -248,20 +253,8 @@ export function initBot() {
 
     // ============================================================
     // /add <url> [名称] — 快捷添加新产品监控
+    // 商家域名映射统一使用 constants.js 的 matchProvider
     // ============================================================
-    const providerMap = {
-      'bandwagonhost.com': { provider: 'bandwagonhost', providerName: '搬瓦工', affBase: 'https://bandwagonhost.com/aff.php?aff=81381&pid=' },
-      'bwh81.net': { provider: 'bandwagonhost', providerName: '搬瓦工', affBase: 'https://bandwagonhost.com/aff.php?aff=81381&pid=' },
-      'bwh91.com': { provider: 'bandwagonhost', providerName: '搬瓦工', affBase: 'https://bandwagonhost.com/aff.php?aff=81381&pid=' },
-      'dmit.io': { provider: 'dmit', providerName: 'DMIT', affBase: 'https://www.dmit.io/aff.php?aff=16687&pid=' },
-      'dmitea.com': { provider: 'dmit', providerName: 'DMIT', affBase: 'https://www.dmit.io/aff.php?aff=16687&pid=' },
-      'racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
-      'my.racknerd.com': { provider: 'racknerd', providerName: 'RackNerd', affBase: 'https://my.racknerd.com/aff.php?aff=19252&pid=' },
-      'zgovps.com': { provider: 'zgocloud', providerName: 'ZGO Cloud', affBase: 'https://clients.zgovps.com/aff.php?aff=912&pid=' },
-      'greencloudvps.com': { provider: 'greencloud', providerName: 'GreenCloud', affBase: 'https://greencloudvps.com/billing/cart.php?a=add&pid=' },
-      'billing.greencloudvps.com': { provider: 'greencloud', providerName: 'GreenCloud', affBase: 'https://greencloudvps.com/billing/cart.php?a=add&pid=' },
-      'colocrossing.com': { provider: 'colocrossing', providerName: 'ColoCrossing', affBase: 'https://cloud.colocrossing.com/aff.php?aff=1633&pid=' },
-    };
 
     bot.onText(/^\/add (.+)/, async (msg, match) => {
       if (!requireAdmin(msg)) return;
@@ -270,18 +263,13 @@ export function initBot() {
       const url = args[0];
       const customName = args.slice(1).join(' ') || null;
 
-      // 识别商家
+      // 识别商家（使用 constants.js 统一映射）
       let matched = null;
       let domain = '';
       try {
         const parsed = new URL(url);
         domain = parsed.hostname.replace('www.', '');
-        for (const [key, val] of Object.entries(providerMap)) {
-          if (domain.includes(key.replace('www.', ''))) {
-            matched = val;
-            break;
-          }
-        }
+        matched = matchProvider(url);
       } catch {
         return bot.sendMessage(msg.chat.id, '❌ 无法解析的URL，请粘贴完整的购买/分类链接。');
       }
@@ -383,7 +371,10 @@ export function initBot() {
       try { return await runDiscovery(...args); }
       finally { setDiscoveryRunning(false); }
     };
-    startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4, guardedDiscovery);
+    // ⚠️ 自动发现引擎已关闭 — 产品抓取质量差（抓到页面标题当产品名），
+    //    专注于已有产品的库存监控和补货推送。如需手动扫描仍可用 /discover 命令。
+    // startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4, guardedDiscovery);
+    console.log('[TgBot] 🚫 自动发现引擎已关闭，仅保留 /discover 手动触发');
 
     // 订阅 EventBus 的补货通知
     eventBus.on('restock', (products) => {

@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { runScraperCycle, stockState, catalog, reloadCatalog } from './scraper.js';
 import db from './db.js';
 import eventBus from './eventBus.js';
+import { closeBrowser } from './browser.js';
+import { JUNK_PATTERNS } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,14 +14,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middleware
-app.use(cors());
+// Middleware — 公开 API 允许跨域，管理 API 不走全局 CORS
+app.use('/api/vps', cors());
+app.use('/api/sse', cors());
+app.use('/speedtest', cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // ── 一次性迁移：清除已废弃商家 CloudCone 的全部数据 ──
 {
-  const ccProducts = db.db.prepare("SELECT id FROM products WHERE provider = 'cloudcone'").all();
+  const ccProducts = db.getProductsByProvider('cloudcone');
   if (ccProducts.length > 0) {
     for (const p of ccProducts) db.purgeProduct(p.id);
     reloadCatalog();
@@ -81,8 +85,12 @@ app.get('/api/sse', (req, res) => {
   });
   res.flushHeaders();
 
-  // 发送初始完整库存快照
-  const initData = Object.values(stockState).filter(p => !p.isHidden);
+  // 发送初始完整库存快照（与 /api/vps/stock 公开 API 保持一致的过滤逻辑）
+  const initData = Object.values(stockState).filter(p => {
+    if (p.isHidden) return false;
+    if (p.price === '待确认' || p.price === '价格待确认') return false;
+    return true;
+  });
   res.write(`data: ${JSON.stringify({ type: 'init', data: initData })}\n\n`);
 
   sseClients.add(res);
@@ -126,26 +134,24 @@ app.get('/api/vps/stock/:productId', (req, res) => {
 
 
 // Admin API - Password protection middleware
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+if (!ADMIN_TOKEN || ADMIN_TOKEN === 'change_this_password') {
+  console.warn('⚠️ 警告：未设置有效的 ADMIN_TOKEN 环境变量，管理接口将拒绝所有请求！请在 .env 中设置 ADMIN_TOKEN。');
+}
+
 function requireAdmin(req, res, next) {
+  if (!ADMIN_TOKEN || ADMIN_TOKEN === 'change_this_password') {
+    return res.status(503).json({ success: false, error: '服务端未配置 ADMIN_TOKEN，管理接口不可用' });
+  }
   const token = req.headers['authorization'];
-  const adminToken = process.env.ADMIN_TOKEN || 'admin888';
-  if (token === adminToken) {
+  if (token === ADMIN_TOKEN) {
     next();
   } else {
     res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 }
 
-// ── 垃圾/待确认判定逻辑（唯一 truth source，前端直接读后端字段） ──
-const JUNK_PATTERNS = [
-  /oops/i, /there's a problem/i, /invalid/i, /404/i, /not found/i,
-  /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
-  /just a moment/i, /checking your browser/i, /cloudflare/i,
-  /shared hosting/i, /cpanel/i, /reseller/i, /dedicated server/i,
-  /virtual web hosting/i, /ssl certificate/i, /addon/i, /extra ip/i,
-  /domain reg/i, /cloud virtual private/i, /web hosting/i,
-  /非VPS产品自动拦截/i,
-];
+// ── 垃圾/待确认判定逻辑（JUNK_PATTERNS 来自 constants.js 唯一 truth source） ──
 function isJunkProduct(p) {
   return JUNK_PATTERNS.some(pat => pat.test(p.name));
 }
@@ -380,8 +386,23 @@ setInterval(() => {
   runScraperCycle();
 }, 5 * 60 * 1000);
 
-app.listen(PORT, '0.0.0.0', () => {
+// ── 404 兜底路由（放在所有路由之后） ──
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'Not found' });
+});
+
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 VPS Monitor API Server running at http://localhost:${PORT}`);
   console.log(`📊 Serving static assets from /public`);
   console.log(`⚡ Speedtest endpoints: /speedtest/garbage, /speedtest/empty, /speedtest/getIP`);
 });
+
+// ── Graceful Shutdown：确保 Chromium 进程正确关闭 ──
+const shutdown = async (signal) => {
+  console.log(`\n[System] 收到 ${signal}，正在优雅关闭...`);
+  server.close();
+  try { await closeBrowser(); } catch (_) {}
+  process.exit(0);
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

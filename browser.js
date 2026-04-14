@@ -40,3 +40,15 @@ export async function getBrowser() {
   }
   return browserInstance;
 }
+
+/**
+ * 关闭浏览器实例（Graceful Shutdown 时调用）
+ * 确保 Chromium 子进程不残留
+ */
+export async function closeBrowser() {
+  if (browserInstance && browserInstance.isConnected()) {
+    console.log('[Browser] 正在关闭 Chromium...');
+    await browserInstance.close();
+    browserInstance = null;
+  }
+}
