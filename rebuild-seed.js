@@ -111,9 +111,65 @@ const bwhProducts = [
 ];
 
 // ═══════════════════════════════════════════════════
-// DMIT — 来自 dmitstock.com（9 款，全部年付）
+// DMIT — 来自 dmitstock.com（15 款，全部年付）
 // ═══════════════════════════════════════════════════
 const dmitProducts = [
+  // --- HKG 系列 ---
+  {
+    id: 'dmit-hkg-t1-wee',
+    name: 'DMIT-HKG.T1.Wee',
+    specs: { cpu: '1C', ram: '1G', disk: '20G SSD', bandwidth: '1000G/月', port: '4Gbps' },
+    price: '$36.90/年',
+    pid: 197,
+    datacenters: ['Hong Kong'],
+    networkRoutes: ['Tier 1 BGP'],
+  },
+  {
+    id: 'dmit-hkg-pro-mongkok',
+    name: 'DMIT-HKG.Pro.MongKok',
+    specs: { cpu: '1C', ram: '1G', disk: '20G SSD', bandwidth: '300G/月', port: '300Mbps' },
+    price: '$149.90/年',
+    pid: 220,
+    datacenters: ['Hong Kong'],
+    networkRoutes: ['CN2 GIA Premium'],
+  },
+  {
+    id: 'dmit-hkg-pro-tsuenwan',
+    name: 'DMIT-HKG.Pro.TsuenWan',
+    specs: { cpu: '1C', ram: '1G', disk: '40G SSD', bandwidth: '500G/月', port: '500Mbps' },
+    price: '$259.90/年',
+    pid: 233,
+    datacenters: ['Hong Kong'],
+    networkRoutes: ['CN2 GIA Premium'],
+  },
+  {
+    id: 'dmit-hkg-pro-victoria',
+    name: 'DMIT-HKG.Pro.VICTORIA',
+    specs: { cpu: '1C', ram: '2G', disk: '60G SSD', bandwidth: '800G/月', port: '500Mbps' },
+    price: '$298.88/年',
+    pid: 178,
+    datacenters: ['Hong Kong'],
+    networkRoutes: ['CN2 GIA Premium'],
+  },
+  {
+    id: 'dmit-hkg-pro-lokmachau',
+    name: 'DMIT-HKG.Pro.LokMaChau',
+    specs: { cpu: '2C', ram: '2G', disk: '80G SSD', bandwidth: '1000G/月', port: '500Mbps' },
+    price: '$358.88/年',
+    pid: 187,
+    datacenters: ['Hong Kong'],
+    networkRoutes: ['CN2 GIA Premium'],
+  },
+  // --- LAX 系列 ---
+  {
+    id: 'dmit-lax-eb-corona',
+    name: 'DMIT-LAX.EB.CORONA',
+    specs: { cpu: '1C', ram: '1G', disk: '20G SSD', bandwidth: '2000G/月', port: '2Gbps' },
+    price: '$49.90/年',
+    pid: 250,
+    datacenters: ['Los Angeles'],
+    networkRoutes: ['Eyeball CMIN2'],
+  },
   {
     id: 'dmit-lax-eb-fontana',
     name: 'DMIT-LAX.EB.FONTANA',
