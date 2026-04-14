@@ -31,6 +31,22 @@ app.use(express.json());
   }
 }
 
+// ── 启动自动清洁：purge 名称为垃圾的产品（防止旧 catalog.json 导入的历史脏数据） ──
+{
+  const allProducts = db.getAllProducts();
+  let purgedCount = 0;
+  for (const p of allProducts) {
+    if (JUNK_PATTERNS.some(pat => pat.test(p.name))) {
+      db.purgeProduct(p.id);
+      purgedCount++;
+    }
+  }
+  if (purgedCount > 0) {
+    reloadCatalog();
+    console.log(`[Startup] 🧹 自动清除 ${purgedCount} 个垃圾产品（Shopping Cart/Shared Hosting/Oops 等）`);
+  }
+}
+
 // Public API endpoints
 app.get('/api/vps/stock', (req, res) => {
   // 网页前端只显示有货的产品（非隐藏 + inStock === true）
