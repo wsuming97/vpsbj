@@ -101,11 +101,11 @@ app.get('/api/sse', (req, res) => {
   });
   res.flushHeaders();
 
-  // 发送初始完整库存快照（与 /api/vps/stock 公开 API 保持一致的过滤逻辑）
+  // 发送初始完整库存快照（与 /api/vps/stock 公开 API 一致：只发有货产品）
   const initData = Object.values(stockState).filter(p => {
     if (p.isHidden) return false;
     if (p.price === '待确认' || p.price === '价格待确认') return false;
-    return true;
+    return p.inStock === true;
   });
   res.write(`data: ${JSON.stringify({ type: 'init', data: initData })}\n\n`);
 

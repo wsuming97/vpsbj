@@ -299,45 +299,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── 增量更新：只更新单张卡片的库存状态，不重绘整个列表 ──
+  // ── 增量更新：有货显示、缺货隐藏 ──
   function patchCardStock(product) {
-    // 找到已经渲染在 DOM 里的对应卡片
-    const card = grid.querySelector(`[data-product-id="${product.id}"]`);
-    if (!card) return; // 该产品不在当前视图里（被筛选掉了），忽略
-
-    const statusContainer = card.querySelector('.stock-status');
-    const buyBtn = card.querySelector('.btn-buy');
-    if (!statusContainer || !buyBtn) return;
+    const idx = currentData.findIndex(p => p.id === product.id);
 
     if (product.inStock === true) {
-      statusContainer.innerHTML = `<span class="status-badge in-stock">✅ 有货</span>`;
-      buyBtn.classList.add('active');
-      buyBtn.href = product.affUrl || product.checkUrl;
-      buyBtn.textContent = '🛒 立即购买';
-      buyBtn.style.pointerEvents = 'auto';
-      // 补货瞬间短暂高亮
-      card.style.transition = 'box-shadow 0.3s ease';
-      card.style.boxShadow = '0 0 0 2px var(--acc-green, #22c55e)';
-      setTimeout(() => { card.style.boxShadow = ''; }, 3000);
-    } else if (product.inStock === null) {
-      statusContainer.innerHTML = `<span class="status-badge checking">⏳ 检测中</span>`;
-      buyBtn.classList.remove('active');
-      buyBtn.textContent = '检测中...';
-      buyBtn.href = '#';
-      buyBtn.style.pointerEvents = 'none';
+      // ── 补货：如果卡片已存在则更新，否则添加并重绘 ──
+      if (idx !== -1) {
+        currentData[idx] = { ...currentData[idx], ...product };
+        const card = grid.querySelector(`[data-product-id="${product.id}"]`);
+        if (card) {
+          const statusContainer = card.querySelector('.stock-status');
+          const buyBtn = card.querySelector('.btn-buy');
+          if (statusContainer) statusContainer.innerHTML = `<span class="status-badge in-stock">✅ 有货</span>`;
+          if (buyBtn) {
+            buyBtn.classList.add('active');
+            buyBtn.href = product.affUrl || product.checkUrl;
+            buyBtn.textContent = '🛒 立即购买';
+            buyBtn.style.pointerEvents = 'auto';
+          }
+          // 补货高亮
+          card.style.transition = 'box-shadow 0.3s ease';
+          card.style.boxShadow = '0 0 0 2px var(--acc-green, #22c55e)';
+          setTimeout(() => { card.style.boxShadow = ''; }, 3000);
+        }
+      } else {
+        // 新补货产品，加入数据并重绘
+        currentData.push(product);
+        renderCards();
+      }
     } else {
-      const errorMsg = product.statusMessage?.startsWith('Error') ? '探测异常' : '缺货状态';
-      statusContainer.innerHTML = `<span class="status-badge oos">❌ ${errorMsg}</span>`;
-      buyBtn.classList.remove('active');
-      buyBtn.textContent = '暂时缺货';
-      buyBtn.href = '#';
-      buyBtn.style.pointerEvents = 'none';
-    }
-
-    // 同步内存数据
-    const idx = currentData.findIndex(p => p.id === product.id);
-    if (idx !== -1) {
-      currentData[idx] = { ...currentData[idx], ...product };
+      // ── 缺货或检测中：从页面移除 ──
+      if (idx !== -1) {
+        currentData.splice(idx, 1);
+        const card = grid.querySelector(`[data-product-id="${product.id}"]`);
+        if (card) card.remove();
+      }
     }
   }
 
