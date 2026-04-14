@@ -336,6 +336,9 @@ function deleteProduct(id) {
 
 /** 删除产品并拉黑（用于垃圾数据清理，永久阻止发现引擎重新扫入） */
 function purgeProduct(id) {
+  // 先删关联记录（外键约束）
+  db.prepare('DELETE FROM price_history WHERE product_id = ?').run(id);
+  db.prepare('DELETE FROM stock_events WHERE product_id = ?').run(id);
   db.prepare('DELETE FROM products WHERE id = ?').run(id);
   db.prepare('INSERT OR IGNORE INTO purged_ids (id) VALUES (?)').run(id);
 }
