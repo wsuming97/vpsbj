@@ -93,11 +93,10 @@ async function tryDirectFetch(product) {
       });
 
       if (Object.keys(cycles).length > 0) {
-        // 优先年付，其次季付，最后月付
-        const preferred = ['annually', 'quarterly', 'monthly'];
-        const useCycle = preferred.find(c => cycles[c]) || Object.keys(cycles)[0];
+        // 使用默认选中的周期，保持和商家页面展示一致
+        const useCycle = defaultCycle || Object.keys(cycles)[0];
         return {
-          price: cycles[useCycle] + '/' + CYCLE_MAP[useCycle] || cycles[useCycle],
+          price: defaultPrice || cycles[useCycle],
           billingCycles: cycles,
           source: 'direct-fetch',
         };
@@ -194,26 +193,60 @@ async function tryPuppeteer(product) {
         'biennially': '两年', 'triennially': '三年',
       };
       const select = document.querySelector('select[name="billingcycle"]');
-      if (select) {
-        Array.from(select.options).forEach(opt => {
-          const t = opt.textContent.trim();
-          const pm = t.match(/\$(\d+[.,]\d{2})/);
-          if (!pm) return;
-          for (const [key, label] of Object.entries(CMAP)) {
-            if (t.toLowerCase().includes(key)) {
-              cycles[key] = `$${pm[1].replace(',', '.')}/${label}`;
-              break;
+      if (!select) return null;
+
+      // 记录默认选中项的周期
+      let selectedCycleKey = null;
+      Array.from(select.options).forEach((opt, i) => {
+        const t = opt.textContent.trim();
+        const pm = t.match(/\$(\d+[.,]\d{2})/);
+        if (!pm) return;
+        for (const [key, label] of Object.entries(CMAP)) {
+          if (t.toLowerCase().includes(key)) {
+            cycles[key] = `$${pm[1].replace(',', '.')}/${label}`;
+            if (opt.selected || i === select.selectedIndex) {
+              selectedCycleKey = key;
             }
+            break;
           }
-        });
-      }
-      const preferred = ['annually', 'quarterly', 'monthly'];
-      const best = preferred.find(c => cycles[c]);
-      return best ? { price: cycles[best], billingCycles: cycles } : null;
+        }
+      });
+
+      if (Object.keys(cycles).length === 0) return null;
+
+      // 优先使用默认选中的周期，保持和商家页面展示一致
+      const best = selectedCycleKey || Object.keys(cycles)[0];
+      return { price: cycles[best], billingCycles: cycles, selectedCycle: best };
     });
     return info ? { ...info, source: 'puppeteer' } : null;
   } catch { return null; }
   finally { if (page) await page.close().catch(() => {}); }
+}
+
+// ── BWH CF 防污染：$29.00 是 MINIBOX 的价格，CF 重定向时所有 BWH 页面都会返回这个价格 ──
+function isBwhCfPollution(product, newPrice) {
+  if (product.provider !== 'bandwagonhost') return false;
+  const pid = extractPid(product.checkUrl);
+  if (pid === '151') return false; // MINIBOX 本身就是 $29.00，不是污染
+  const priceNum = parseFloat((newPrice || '').replace(/[^0-9.]/g, ''));
+  return priceNum === 29.00;
+}
+
+// ── DMIT 周期保护：如果现有价格是月付，不要切成年付总价 ──
+function shouldKeepOriginalCycle(product, newPrice) {
+  if (!product.price) return false;
+  const oldCycle = product.price.match(/\/(月|季|半年|年)/);
+  const newCycle = (newPrice || '').match(/\/(月|季|半年|年)/);
+  if (!oldCycle || !newCycle) return false;
+  // 如果旧价格是月付/季付，新价格变成年付，且数值大很多，说明是年付总价替换了月付
+  if ((oldCycle[1] === '月' || oldCycle[1] === '季') && newCycle[1] === '年') {
+    const oldNum = parseFloat(product.price.replace(/[^0-9.]/g, ''));
+    const newNum = parseFloat(newPrice.replace(/[^0-9.]/g, ''));
+    if (newNum > oldNum * 3) {
+      return true; // 年付总价远大于月付价，明显是换周期了
+    }
+  }
+  return false;
 }
 
 // ── 主同步逻辑 ──
@@ -225,21 +258,42 @@ async function syncProduct(product) {
   // 层1：直接 fetch
   let result = await tryDirectFetch(product);
   if (result?.price) {
-    console.log(`   ✅ 层1直接fetch: ${result.price} (${result.source})`);
-    return result;
+    if (isBwhCfPollution(product, result.price)) {
+      console.log(`   ⚠️ 层1疑似BWH CF重定向($29.00)，跳过`);
+      result = null;
+    } else if (shouldKeepOriginalCycle(product, result.price)) {
+      console.log(`   ⚠️ 层1周期从${product.price}变成${result.price}，疑似年付总价替换月付，跳过`);
+      result = null;
+    } else {
+      console.log(`   ✅ 层1直接fetch: ${result.price} (${result.source})`);
+      return result;
+    }
   }
 
   // 层2：竞品站
   result = await tryCompetitorSite(product);
   if (result?.price) {
-    console.log(`   ✅ 层2竞品站: ${result.price} (${result.source})`);
-    return result;
+    if (isBwhCfPollution(product, result.price)) {
+      console.log(`   ⚠️ 层2疑似BWH CF污染，跳过`);
+      result = null;
+    } else {
+      console.log(`   ✅ 层2竞品站: ${result.price} (${result.source})`);
+      return result;
+    }
   }
 
   // 层3：Puppeteer
   console.log(`   ⏳ 层3 Puppeteer 渲染...`);
   result = await tryPuppeteer(product);
   if (result?.price) {
+    if (isBwhCfPollution(product, result.price)) {
+      console.log(`   ⚠️ 层3疑似BWH CF重定向($29.00)，拒绝更新`);
+      return null;
+    }
+    if (shouldKeepOriginalCycle(product, result.price)) {
+      console.log(`   ⚠️ 层3周期从${product.price}变成${result.price}，疑似年付总价替换月付，拒绝更新`);
+      return null;
+    }
     console.log(`   ✅ 层3Puppeteer: ${result.price}`);
     return result;
   }
