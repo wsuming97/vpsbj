@@ -142,7 +142,9 @@ const JUNK_PATTERNS = [
   /shopping cart/i, /error/i, /stack error/i, /encountered a problem/i,
   /just a moment/i, /checking your browser/i, /cloudflare/i,
   /shared hosting/i, /cpanel/i, /reseller/i, /dedicated server/i,
-  /virtual web hosting/i, /ssl certificate/i
+  /virtual web hosting/i, /ssl certificate/i, /addon/i, /extra ip/i,
+  /domain reg/i, /cloud virtual private/i, /web hosting/i,
+  /非VPS产品自动拦截/i,
 ];
 function isJunkProduct(p) {
   return JUNK_PATTERNS.some(pat => pat.test(p.name));
@@ -227,12 +229,11 @@ app.delete('/api/admin/catalog/:id', requireAdmin, (req, res) => {
 app.post('/api/admin/purge-pending', requireAdmin, (req, res) => {
   const allProducts = db.getAllProducts();
   
-  // 复用模块级 isJunkProduct / isPendingProduct 判定逻辑
+  // 所有垃圾名称产品 + 所有待确认产品（来源为 discovered 的）一律清理
   const pendingItems = allProducts.filter(p => {
     if (isJunkProduct(p)) return true;
     if (!isPendingProduct(p)) return false;
-    // 待确认 + 名称含"自动发现"/"新品" 才清理
-    return p.name.includes('自动发现') || p.name.includes('新品');
+    return p.source === 'discovered';
   });
   
   let deleted = 0;
@@ -257,7 +258,7 @@ app.post('/api/admin/batch-delete', requireAdmin, (req, res) => {
   let deleted = 0;
   for (const id of ids) {
     if (db.productExists(id)) {
-      db.deleteProduct(id);
+      db.purgeProduct(id);  // purge = 删除 + 拉黑，防止发现引擎重新扫入
       deleted++;
     }
   }

@@ -20,6 +20,11 @@ import { getBrowser } from './browser.js';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ============================================================
+// 垃圾名称正则（唯一 truth source，所有检查点统一引用）
+// ============================================================
+const JUNK_NAME_RE = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg|just a moment|checking your browser|cloudflare|stack error|encountered a problem|SSL Certificate|Addon|Extra IP|Dedicated Server|Domain Registration/i;
+
+// ============================================================
 // 推广 ID
 // ============================================================
 const AFF = {
@@ -191,26 +196,50 @@ async function scrapeProductDetails(browser, url) {
         result.isInvalid = true;
       }
 
-      // ── 提取产品名称 ──
-      const nameEl = document.querySelector('h1') ||
-                     document.querySelector('.product-name') ||
-                     document.querySelector('.product-title') ||
-                     document.querySelector('#product-name');
-      if (nameEl) {
-        let n = nameEl.textContent.trim();
-        n = n.replace(/^(Configure|Order|配置)\s*/i, '').trim();
-        if (n && n.length > 1 && n.length < 150) result.name = n;
+      // ── 提取产品名称（多策略，避免误取 WHMCS 通用标题） ──
+      const junkTitles = /^(Shopping Cart|Configure|Order|Review|Checkout|Error|404|Oops)$/i;
+
+      // 策略 1：WHMCS 产品配置区域（比 h1 更精确）
+      const whmcsNameEl = document.querySelector('.product-title') ||
+                          document.querySelector('.product-name') ||
+                          document.querySelector('#product-name') ||
+                          document.querySelector('.panel-heading .panel-title') ||
+                          document.querySelector('.product-group h3') ||
+                          document.querySelector('#order-standard_cart .header h1');
+      if (whmcsNameEl) {
+        let n = whmcsNameEl.textContent.trim().replace(/^(Configure|Order|配置)\s*/i, '').trim();
+        if (n && n.length > 1 && n.length < 150 && !junkTitles.test(n)) result.name = n;
       }
+
+      // 策略 2：面包屑导航（WHMCS 面包屑通常含真实产品名）
+      if (!result.name) {
+        const breadcrumb = document.querySelector('.breadcrumb li:last-child, .breadcrumb li.active, nav[aria-label="breadcrumb"] li:last-child');
+        if (breadcrumb) {
+          let n = breadcrumb.textContent.trim();
+          if (n && n.length > 2 && n.length < 150 && !junkTitles.test(n)) result.name = n;
+        }
+      }
+
+      // 策略 3：h1（兜底，但过滤掉 WHMCS 通用标题）
+      if (!result.name) {
+        const h1 = document.querySelector('h1');
+        if (h1) {
+          let n = h1.textContent.trim().replace(/^(Configure|Order|配置)\s*/i, '').trim();
+          if (n && n.length > 1 && n.length < 150 && !junkTitles.test(n)) result.name = n;
+        }
+      }
+
+      // 策略 4：document.title（去除站名后缀）
       if (!result.name && document.title) {
-        const t = document.title.replace(/- .*$/, '').replace(/\|.*$/, '').trim();
-        if (t && t.length > 2 && t.length < 100) result.name = t;
+        const t = document.title.replace(/\s*[-|–—].*$/, '').trim();
+        if (t && t.length > 2 && t.length < 100 && !junkTitles.test(t)) result.name = t;
       }
 
       // ── 剔除明确不是 VPS 的无关产品和垃圾页面 ──
-      const nonVpsPatterns = /Shared Hosting|cPanel|Reseller|Virtual Web Hosting|Dedicated Server|Domain Registration|Addon|Extra IP|SSL Certificate|Shopping Cart|Oops|there.*problem|Cloud Virtual Private Servers|Web Hosting|Error|Page Not Found|404/i;
+      const nonVpsPatterns = /Shared Hosting|cPanel|Reseller|Virtual Web Hosting|Dedicated Server|Domain Registration|Addon|Extra IP|SSL Certificate|Shopping Cart|Oops|there.*problem|Cloud Virtual Private Servers|Web Hosting|Error|Page Not Found|404|just a moment|checking your browser|cloudflare|stack error/i;
       if (result.name && nonVpsPatterns.test(result.name)) {
-        result.isInvalid = true; // 强制标记为无效
-        result.name = '⚠️非VPS产品自动拦截';
+        result.isInvalid = true;
+        result.name = null;  // 不要存垃圾名称，让调用方用生成名或跳过
       }
 
       // ── 检测邀请码限制产品 ──
@@ -511,9 +540,22 @@ async function probePids(browser, source, catalogRef) {
 
       const isValidProduct = isNotInvalid && hasVpsKeywords && containsOrderKeywords;
 
-      if (isValidProduct) {
+      // 额外检查：页面标题是否为 WHMCS 通用垃圾标题
+      const pageTitle = await page.title().catch(() => '');
+      const h1Text = await page.evaluate(() => {
+        const h1 = document.querySelector('h1');
+        return h1 ? h1.textContent.trim() : '';
+      }).catch(() => '');
+      const titleIsJunk = /^Shopping Cart/i.test(pageTitle) || /^Shopping Cart$/i.test(h1Text);
+
+      if (isValidProduct && !titleIsJunk) {
         pids.add(String(pid));
         console.log(`[Discoverer]     ✅ PID=${pid} 存在且疑似 VPS！`);
+      } else if (isValidProduct && titleIsJunk) {
+        // 页面有VPS内容但标题是 "Shopping Cart" → 这是 WHMCS 通用购物车页面
+        // 对于 BWH 这类不展示产品名的商家，仍然加入但后续 scrapeProductDetails 会尝试提取真名
+        pids.add(String(pid));
+        console.log(`[Discoverer]     ⚠️ PID=${pid} 疑似VPS但标题为"Shopping Cart"，将尝试深度提取`);
       } else if (isNotInvalid && containsOrderKeywords) {
         console.log(`[Discoverer]     ⏭️ PID=${pid} 存在，但未检测到VPS特征词，跳过以免误增无关商品`);
       }
@@ -813,22 +855,25 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         await sleep(1500);
 
         // 统一垃圾页面检测：isInvalid 标记 + 名称关键词双重拦截
-        const junkNamePatterns = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
-        if (details.isInvalid || (details.name && junkNamePatterns.test(details.name))) {
+        if (details.isInvalid || (details.name && JUNK_NAME_RE.test(details.name))) {
            console.log(`[Discoverer]     🚫 拦截垃圾页面: ${details.name || '无标题'}`);
-           // 拉黑，避免下轮又试
            if (!db.isIdPurged(candidateId)) {
-             db.purgeProduct(candidateId); // purge = 删除 + 拉黑，确认垃圾页面永不重新扫入
+             db.purgeProduct(candidateId);
            }
-           continue; 
+           continue;
+        }
+
+        // 没有名称也没有价格 = 页面加载失败（CF拦截等），跳过不入库
+        if (!details.name && !details.price) {
+          console.log(`[Discoverer]     ⏭️ PID=${pid} 无法获取名称和价格，跳过（不拉黑，下轮重试）`);
+          continue;
         }
 
         const realName = details.name || `${source.providerName} 新品 (pid=${pid})`;
         const realPrice = details.price || '价格待确认';
 
-        // 最终名称垃圾兜底（防止 scrapeProductDetails 漏检）
-        const junkNameCheck1 = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
-        if (junkNameCheck1.test(realName)) {
+        // 最终名称垃圾兜底
+        if (JUNK_NAME_RE.test(realName)) {
           console.log(`[Discoverer]     🚫 拦截垃圾名称: ${realName}`);
           if (!db.isIdPurged(candidateId)) db.purgeProduct(candidateId);
           continue;
@@ -908,6 +953,13 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       let promoCode = cp.promoCode;
       let scrapedDetails = null;
 
+      // 上下文名称本身就是垃圾 → 直接拉黑
+      if (realName && JUNK_NAME_RE.test(realName)) {
+        console.log(`[Discoverer]     🚫 上下文名称是垃圾: ${realName}`);
+        db.purgeProduct(candidateId);
+        continue;
+      }
+
       // 如果上下文没提到价格，尝试进产品页面抓一次
       if (!realPrice) {
         const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
@@ -915,8 +967,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         scrapedDetails = await scrapeProductDetails(browser, productUrl);
         await sleep(1500);
 
-        const junkNamePatterns2 = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
-        if (scrapedDetails.isInvalid || (scrapedDetails.name && junkNamePatterns2.test(scrapedDetails.name))) {
+        if (scrapedDetails.isInvalid || (scrapedDetails.name && JUNK_NAME_RE.test(scrapedDetails.name))) {
            console.log(`[Discoverer]     🚫 拦截垃圾页面: ${scrapedDetails.name || '无标题'}`);
            db.purgeProduct(candidateId);
            continue;
@@ -931,8 +982,7 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       realPrice = realPrice || '价格待确认';
 
       // 最终名称垃圾检查（即使来自上下文也要过滤）
-      const junkFinalCheck = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg/i;
-      if (junkFinalCheck.test(realName)) {
+      if (JUNK_NAME_RE.test(realName)) {
         console.log(`[Discoverer]     🚫 拦截垃圾名称: ${realName}`);
         db.purgeProduct(candidateId);
         continue;
@@ -987,10 +1037,11 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       try {
         console.log(`[Discoverer]   🔁 重试: ${item.id}`);
         const details = await scrapeProductDetails(browser, item.checkUrl);
-        if (details.isInvalid || details.name === '404 Not Found' || details.name === 'Shopping Cart') {
-           item.isHidden = true;
-           db.updateProduct(item.id, { isHidden: true });
-           console.log(`[Discoverer]     🚫 该链接实为失效/死链，已从前端静默剔除`);
+        // 垃圾页面 → purge 拉黑（不再仅隐藏，彻底阻止重新扫入）
+        if (details.isInvalid || (details.name && JUNK_NAME_RE.test(details.name)) || !details.name) {
+           db.purgeProduct(item.id);
+           console.log(`[Discoverer]     🚫 垃圾/失效页面，已 purge 拉黑: ${details.name || '无标题'}`);
+           continue;  // 从 pendingItems 循环中跳过
         } else if (details.price && details.price !== '价格待确认') {
           const updates = { price: details.price };
           item.price = details.price;

@@ -13,7 +13,7 @@
  */
 import db from './db.js';
 
-const JUNK_PATTERNS = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg|just a moment|checking your browser|cloudflare|stack error|encountered a problem/i;
+const JUNK_PATTERNS = /Shopping Cart|Shared Hosting|404|Oops|there.*problem|Cloud Virtual Private|Web Hosting|Error|Page Not Found|cPanel|Reseller|Domain Reg|just a moment|checking your browser|cloudflare|stack error|encountered a problem|SSL Certificate|Addon|Extra IP|Dedicated Server|Domain Registration|非VPS产品自动拦截/i;
 
 const allProducts = db.getAllProducts();
 
