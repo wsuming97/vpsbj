@@ -172,12 +172,23 @@ async function processCheckResult(product, result, restockedProducts) {
     }
 
     // 只有从「确认缺货」变成「有货」才算补货，首次检测（null→true）不算
-    if (previouslyInStock === false && result.inStock === true) {
-      console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
+    const isRestock = previouslyInStock === false && result.inStock === true;
+    // 首次检测（从 null 到任意状态）也需要抓取真实价格
+    const isFirstCheck = previouslyInStock === null;
+    // 价格缺失或为占位标记时也需要抓取
+    const needsPriceFix = !product.price || product.price === '待确认' || product.price === '价格待确认' || !/\$/.test(product.price);
 
-      // ── 补货瞬间：实时抓取最新价格 ──
-      // TODO: 以下价格解析逻辑与 discovery.js scrapeProductDetails 高度重复，
-      //       待后续重构时提取为共享函数（当前不动以避免引入风险）
+    if (isRestock) {
+      console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
+    }
+
+    // ── 补货或首次检测或价格缺失时：实时抓取最新价格 ──
+    // TODO: 以下价格解析逻辑与 discovery.js scrapeProductDetails 高度重复，
+    //       待后续重构时提取为共享函数（当前不动以避免引入风险）
+    if (isRestock || isFirstCheck || needsPriceFix) {
+      if (isFirstCheck && !isRestock) {
+        console.log(`📋 [FIRST CHECK] ${product.name} — 首次检测，抓取真实价格...`);
+      }
       let livePrice = null;
       let liveCycles = null;
       const oldPrice = product.price;
@@ -272,13 +283,15 @@ async function processCheckResult(product, result, restockedProducts) {
         db.updateProduct(product.id, { billingCycles: liveCycles });
       }
 
-      restockedProducts.push({
-        ...stockState[product.id],
-        inStock: true,
-        priceChanged,
-        oldPrice: priceChanged ? oldPrice : null,
-        livePrice: livePrice || oldPrice,
-      });
+      if (isRestock) {
+        restockedProducts.push({
+          ...stockState[product.id],
+          inStock: true,
+          priceChanged,
+          oldPrice: priceChanged ? oldPrice : null,
+          livePrice: livePrice || oldPrice,
+        });
+      }
     }
   } else {
     stockState[product.id].lastChecked = new Date().toISOString();
