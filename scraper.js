@@ -284,12 +284,24 @@ async function processCheckResult(product, result, restockedProducts) {
   }
 }
 
+// ── 轮次叠加保护：上一轮未完成时跳过 ──
+let scraperRunning = false;
+
 export async function runScraperCycle() {
+  // 上一轮还没跑完，跳过本轮避免叠加
+  if (scraperRunning) {
+    console.log(`[Scraper] ⏸ Previous cycle still running, skipping to avoid overlap`);
+    return;
+  }
+
   // Discovery 运行时暂停本轮，让出 CPU
   if (discoveryRunning) {
     console.log(`[Scraper] ⏸ Discovery is running, skipping this cycle to save CPU`);
     return;
   }
+
+  scraperRunning = true;
+  try {
 
   cycleCount++;
   const toCheck = catalog.filter(p => !p.isHidden && shouldCheckThisCycle(p));
@@ -329,4 +341,8 @@ export async function runScraperCycle() {
   // 通知前端本轮已完成
   eventBus.emit('cycle:done', { cycleCount, total: catalog.length, checked: toCheck.length });
   console.log(`[Scraper] Cycle #${cycleCount} finished.`);
+
+  } finally {
+    scraperRunning = false;
+  }
 }
