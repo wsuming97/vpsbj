@@ -994,7 +994,6 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
       const isAutoLive = realPrice !== '价格待确认';
       const realCycles = (scrapedDetails && scrapedDetails.billingCycles) ? scrapedDetails.billingCycles : {};
 
-      const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
       const newEntry = {
         id: `${cp.provider}-auto-${cp.pid}`,
         provider: cp.provider,
