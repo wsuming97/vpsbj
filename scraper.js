@@ -92,6 +92,18 @@ export async function checkProductStock(product) {
 
     await page.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
+    const finalUrl = page.url();
+    let urlObj;
+    try { urlObj = new URL(finalUrl); } catch(e) {}
+    
+    // 🛡️ 核心防线：反跑冒滴漏重定向判定
+    // 若源站买链接包含 pid=，但落地页丢失了单品参数(pid/id/i)，说明商品已被商家下架并踢回大厅
+    if (urlObj && product.checkUrl.includes('pid=') && !urlObj.searchParams.has('pid') && !urlObj.searchParams.has('id') && !urlObj.searchParams.has('i')) {
+      console.log(`[Scraper] 🚫 防错杀拦截 - 遭遇重定向劫持 (${product.name}): ${finalUrl}`);
+      // 直接判定为缺货
+      return { success: true, inStock: false, html: 'Redirected to storefront (OOS/Removed)' };
+    }
+
     // 智能等待：内容出现则提前结束，最多等 5s
     await Promise.race([
       page.waitForFunction(() => (document.body?.innerText?.trim()?.length || 0) > 200, { timeout: 5000 }),
@@ -197,6 +209,13 @@ async function processCheckResult(product, result, restockedProducts) {
         const pricePage = await browser.newPage();
         try {
           await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          
+          let pUrlObj;
+          try { pUrlObj = new URL(pricePage.url()); } catch(e) {}
+          if (pUrlObj && product.checkUrl.includes('pid=') && !pUrlObj.searchParams.has('pid') && !pUrlObj.searchParams.has('id') && !pUrlObj.searchParams.has('i')) {
+             throw new Error('价格抓取遭重定向拦截');
+          }
+
           await Promise.race([
             pricePage.waitForFunction(() => (document.body?.innerText?.trim()?.length || 0) > 200, { timeout: 4000 }),
             sleep(4000),

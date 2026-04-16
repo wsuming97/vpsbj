@@ -169,6 +169,16 @@ async function scrapeProductDetails(browser, url) {
     } catch {}
 
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    
+    // 🛡️ 发现引擎防线：反重定向劫持
+    let urlObj;
+    try { urlObj = new URL(page.url()); } catch(e) {}
+    if (urlObj && url.includes('pid=') && !urlObj.searchParams.has('pid') && !urlObj.searchParams.has('id') && !urlObj.searchParams.has('i')) {
+      console.log(`[Discoverer]     🚫 重定向劫持拦截: ${url} -> ${page.url()}`);
+      details.isInvalid = true;
+      return details;
+    }
+
     await sleep(4000);
 
     // 从页面中提取产品名称、价格和优惠码
@@ -508,6 +518,14 @@ async function probePids(browser, source, catalogRef) {
     try {
       const url = `https://${source.domain}/cart.php?a=add&pid=${pid}`;
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      
+      let urlObj;
+      try { urlObj = new URL(page.url()); } catch(e) {}
+      if (urlObj && !urlObj.searchParams.has('pid') && !urlObj.searchParams.has('id') && !urlObj.searchParams.has('i')) {
+        console.log(`[Discoverer]     ⏭️ PID=${pid} 重定向到大厅，判定为不存在/已下架`);
+        continue;
+      }
+      
       await sleep(3000);
 
       const html = await page.content();
@@ -946,23 +964,22 @@ export async function runDiscovery(bot, adminChatId, catalogRef, reloadCatalog) 
         continue;
       }
 
-      // 如果上下文没提到价格，尝试进产品页面抓一次
-      if (!realPrice) {
-        const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
-        console.log(`[Discoverer]     📝 上下文缺价格，进页面抓: PID=${cp.pid}`);
-        scrapedDetails = await scrapeProductDetails(browser, productUrl);
-        await sleep(1500);
+      // 无论上下文是否有价格，强制进产品页面验证存活性并提取最新价格（核心：触发防重定向劫持护盾）
+      const productUrl = `https://${cp.domain}/cart.php?a=add&pid=${cp.pid}`;
+      console.log(`[Discoverer]     📝 强制进页面验证存活性: PID=${cp.pid}`);
+      scrapedDetails = await scrapeProductDetails(browser, productUrl);
+      await sleep(1500);
 
-        if (scrapedDetails.isInvalid || (scrapedDetails.name && JUNK_NAME_RE.test(scrapedDetails.name))) {
-           console.log(`[Discoverer]     🚫 拦截垃圾页面: ${scrapedDetails.name || '无标题'}`);
-           db.purgeProduct(candidateId);
-           continue;
-        }
-
-        if (!realName) realName = scrapedDetails.name;
-        realPrice = scrapedDetails.price;
-        if (!promoCode && scrapedDetails.promoCode) promoCode = scrapedDetails.promoCode;
+      if (scrapedDetails.isInvalid || (scrapedDetails.name && JUNK_NAME_RE.test(scrapedDetails.name))) {
+         console.log(`[Discoverer]     🚫 拦截垃圾页面/已失效产品: ${scrapedDetails.name || '无标题'} (URL可能遭重定向)`);
+         db.purgeProduct(candidateId);
+         continue; // 彻底舍弃
       }
+
+      // 优先采用从真实页面抓取出的名称和价格，如果抓取不到，才后备使用竞品站上下文中猜出的数据
+      realName = scrapedDetails.name || realName;
+      realPrice = scrapedDetails.price || realPrice;
+      if (!promoCode && scrapedDetails.promoCode) promoCode = scrapedDetails.promoCode;
 
       realName = realName || `${cp.providerName} 新品 (pid=${cp.pid})`;
       realPrice = realPrice || '价格待确认';
