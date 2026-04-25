@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 import { runScraperCycle, stockState, catalog, reloadCatalog } from './scraper.js';
 import db from './db.js';
 import eventBus from './eventBus.js';
-import { closeBrowser } from './browser.js';
 import { JUNK_PATTERNS } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -389,12 +388,12 @@ import('./tgBot.js').then(({ initBot }) => {
   console.error('⚠️ Telegram Bot 启动失败:', err.message);
 });
 
-// 启动库存检测轮询（每 5 分钟）
-// 每个产品检测约 4-7 秒，74 款轮完需 5-8 分钟，使用 5 分钟间隔避免并发堆积
+// 启动库存检测轮询（每 1 分钟）
+// 已切换为纯 HTTP 重定向检测，单次 <1 秒/产品，全量检测 <30 秒完成
 runScraperCycle();
 setInterval(() => {
   runScraperCycle();
-}, 5 * 60 * 1000);
+}, 60 * 1000);
 
 // ── 404 兜底路由（放在所有路由之后） ──
 app.use((req, res) => {
@@ -407,11 +406,10 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`⚡ Speedtest endpoints: /speedtest/garbage, /speedtest/empty, /speedtest/getIP`);
 });
 
-// ── Graceful Shutdown：确保 Chromium 进程正确关闭 ──
-const shutdown = async (signal) => {
-  console.log(`\n[System] 收到 ${signal}，正在优雅关闭...`);
+// ── Graceful Shutdown ──
+const shutdown = (signal) => {
+  console.log(`\n[System] 收到 ${signal}，正在关闭...`);
   server.close();
-  try { await closeBrowser(); } catch (_) {}
   process.exit(0);
 };
 process.on('SIGTERM', () => shutdown('SIGTERM'));

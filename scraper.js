@@ -2,8 +2,7 @@
 import eventBus from './eventBus.js';
 // 使用 SQLite 数据库替代 catalog.json
 import db from './db.js';
-// 共享 Chromium 单例，与 discovery.js 复用同一进程
-import { getBrowser } from './browser.js';
+import fetch from 'node-fetch';
 
 
 // 从数据库加载产品列表（替代原来的 catalog.json 读取）
@@ -13,14 +12,15 @@ export let catalog = db.getAllProducts();
 export const stockState = {};
 
 // ── 并发控制 ──
-const CONCURRENT_CHECKS = 3;        // 同时最多 3 个产品并行检测
-const DOMAIN_MIN_INTERVAL = 6000;   // 同域名两次请求最少间隔 6 秒
+// HTTP 重定向检测极轻量，可大幅提升并发和频率
+const CONCURRENT_CHECKS = 10;       // 同时最多 10 个产品并行检测（HTTP 请求轻量）
+const DOMAIN_MIN_INTERVAL = 2000;   // 同域名两次请求最少间隔 2 秒
 const domainLastCheck = new Map();  // domain → timestamp
 
 // ── 智能跳过：长期缺货产品降频检测 ──
 let cycleCount = 0;
 
-// ── Discovery 互斥锁：Discovery 跑时 scraper 让出 CPU ──
+// ── Discovery 互斥锁（已废弃，保留导出接口以兼容 tgBot.js） ──
 export let discoveryRunning = false;
 export function setDiscoveryRunning(val) { discoveryRunning = val; }
 
@@ -74,85 +74,129 @@ export function reloadCatalog() {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
+/**
+ * 纯 HTTP 重定向检测库存（借鉴 vpsjk.de 方案）
+ * 
+ * 原理：WHMCS 购物车系统的通用行为——
+ *   有货 → 重定向到 cart.php?a=confproduct&i=0 (配置产品页)
+ *   无货 → 停留在 cart.php?a=add&pid=XXX 或重定向回大厅
+ * 
+ * 优势：<1 秒/次，无需浏览器，不触发 Cloudflare，零内存占用
+ */
+async function followRedirects(url, maxHops = 8) {
+  let currentUrl = url;
+  for (let i = 0; i < maxHops; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(currentUrl, {
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+      });
+      clearTimeout(timeout);
+
+      // 非重定向 → 到达终点
+      if (res.status < 300 || res.status >= 400) {
+        // 对于 200 响应，快速读取部分 body 以检测 Out of Stock 关键词
+        let bodySnippet = '';
+        try {
+          const text = await res.text();
+          bodySnippet = text.substring(0, 5000).toLowerCase();
+        } catch {}
+        return { finalUrl: currentUrl, statusCode: res.status, bodySnippet };
+      }
+
+      // 跟踪重定向
+      const location = res.headers.get('location');
+      if (!location) {
+        return { finalUrl: currentUrl, statusCode: res.status, bodySnippet: '' };
+      }
+
+      // 处理相对路径重定向
+      try {
+        currentUrl = new URL(location, currentUrl).href;
+      } catch {
+        currentUrl = location;
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  }
+  return { finalUrl: currentUrl, statusCode: 0, bodySnippet: '' };
+}
+
 export async function checkProductStock(product) {
-  let page = null;
   try {
-    // ── 域名级限速：同域名请求不得超过 1 次 / 6s ──
+    // ── 域名级限速 ──
     const domain = getDomain(product.checkUrl);
     const lastMs = domainLastCheck.get(domain) || 0;
     const wait = Math.max(0, lastMs + DOMAIN_MIN_INTERVAL - Date.now());
     if (wait > 0) await sleep(wait);
     domainLastCheck.set(domain, Date.now());
 
-    const browser = await getBrowser();
-    page = await browser.newPage();
+    // ── 纯 HTTP 重定向检测 ──
+    const { finalUrl, statusCode, bodySnippet } = await followRedirects(product.checkUrl);
 
-    // Set typical viewport and user agent
-    await page.setViewport({ width: 1280, height: 720 });
+    let finalUrlObj;
+    try { finalUrlObj = new URL(finalUrl); } catch {}
 
-    await page.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-
-    const finalUrl = page.url();
-    let urlObj;
-    try { urlObj = new URL(finalUrl); } catch(e) {}
-    
-    // 🛡️ 核心防线：反跑冒滴漏重定向判定
-    // 若源站买链接包含 pid=，但落地页丢失了单品参数(pid/id/i)，说明商品已被商家下架并踢回大厅
-    if (urlObj && product.checkUrl.includes('pid=') && !urlObj.searchParams.has('pid') && !urlObj.searchParams.has('id') && !urlObj.searchParams.has('i')) {
-      console.log(`[Scraper] 🚫 防错杀拦截 - 遭遇重定向劫持 (${product.name}): ${finalUrl}`);
-      // 直接判定为缺货
-      return { success: true, inStock: false, html: 'Redirected to storefront (OOS/Removed)' };
+    // 🛡️ 防线 1：反重定向劫持 — pid 丢失说明被踢回大厅（商品已下架）
+    if (finalUrlObj && product.checkUrl.includes('pid=') &&
+        !finalUrlObj.searchParams.has('pid') &&
+        !finalUrlObj.searchParams.has('id') &&
+        !finalUrlObj.searchParams.has('i')) {
+      // 但是 confproduct 页面有 i= 参数，属于有货，不拦截
+      if (!finalUrl.includes('confproduct') && !finalUrl.includes('configureproduct')) {
+        return { success: true, inStock: false };
+      }
     }
 
-    // 智能等待：内容出现则提前结束，最多等 5s
-    await Promise.race([
-      page.waitForFunction(() => (document.body?.innerText?.trim()?.length || 0) > 200, { timeout: 5000 }),
-      sleep(5000),
-    ]).catch(() => {}); // 超时不抛出，继续检测
-    await sleep(500); // 最小缓冲
+    // 🎯 核心判断：最终 URL 特征判定有货/无货
+    let inStock;
 
-    const html = await page.content();
-    const htmlLower = html.toLowerCase();
-
-    // Detect blank / empty page (JS渲染失败或被拦截返回空壳)
-    const bodyLen = await page.evaluate(() => (document.body ? document.body.innerText.trim().length : 0));
-    if (bodyLen < 100) {
-      throw new Error('Page returned empty content (possible bot block or JS render failure)');
+    // 有货标志：到达了产品配置页（WHMCS 通用行为）
+    if (finalUrl.includes('confproduct') || finalUrl.includes('configureproduct')) {
+      inStock = true;
     }
-
-    // Detect Cloudflare and anti-bot challenges
-    const cfPatterns = ['cf-browser-verification', 'just a moment', 'checking your browser', 'enable javascript and cookies'];
-    if (cfPatterns.some(p => htmlLower.includes(p))) {
-      throw new Error('Blocked by Cloudflare/Bot Protection');
+    // 无货标志：停留在加入购物车页面（未被接受）
+    else if (finalUrl.includes('cart.php?a=add') || finalUrl.includes('a=add')) {
+      // 进一步检查 body 中的缺货关键词确认
+      const hasOosKeyword = (product.outOfStockKeywords || []).some(kw =>
+        bodySnippet.includes(kw.toLowerCase())
+      );
+      inStock = !hasOosKeyword;
     }
-
-    // Detect 404 / invalid pages — mark as out of stock (not throw, avoid false restock alert)
-    const invalidPagePatterns = ["there's a problem", 'the resource requested could not be found', 'stack error - 404', '404 not found'];
-    const isInvalidPage = invalidPagePatterns.some(p => htmlLower.includes(p)) && bodyLen < 2000;
-
-    let inStock = true;
-    if (isInvalidPage) {
-      inStock = false;
-    } else {
-      for (const keyword of product.outOfStockKeywords) {
-        if (htmlLower.includes(keyword.toLowerCase())) {
+    // 无法从 URL 判断 → 降级到 body 关键词检测
+    else {
+      inStock = true; // 默认有货
+      for (const keyword of (product.outOfStockKeywords || [])) {
+        if (bodySnippet.includes(keyword.toLowerCase())) {
           inStock = false;
           break;
         }
       }
-      // 需要邀请码且该产品没有配置邀请码/优惠码 → 等同缺货
-      // 如果产品已配置了 promoCode（从竞品站或手动录入），则不拦截
-      if (inStock && !product.promoCode && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(html)) {
-        inStock = false;
-      }
     }
 
-    return { success: true, inStock, html };
+    // 需要邀请码且无优惠码 → 等同缺货
+    if (inStock && !product.promoCode && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(bodySnippet)) {
+      inStock = false;
+    }
+
+    // 404 / 失效页面 → 缺货
+    if (statusCode === 404 || /there's a problem|resource requested could not be found|stack error.*404|404 not found/i.test(bodySnippet)) {
+      inStock = false;
+    }
+
+    return { success: true, inStock };
   } catch (error) {
     console.error(`[Scraper] Error checking ${product.id}:`, error.message);
     return { success: false, inStock: false, error: error.message };
-  } finally {
-    if (page) await page.close().catch(e=>null);
   }
 }
 
@@ -185,132 +229,14 @@ async function processCheckResult(product, result, restockedProducts) {
 
     // 只有从「确认缺货」变成「有货」才算补货，首次检测（null→true）不算
     const isRestock = previouslyInStock === false && result.inStock === true;
-    // 首次检测（从 null 到任意状态）也需要抓取真实价格
-    const isFirstCheck = previouslyInStock === null;
-    // 价格缺失或为占位标记时也需要抓取
-    const needsPriceFix = !product.price || product.price === '待确认' || product.price === '价格待确认' || !/\$/.test(product.price);
 
     if (isRestock) {
       console.log(`🚨 [RESTOCK ALERT] ${product.name} IS NOW IN STOCK!`);
-    }
-
-    // ── 补货或首次检测或价格缺失时：实时抓取最新价格 ──
-    // TODO: 以下价格解析逻辑与 discovery.js scrapeProductDetails 高度重复，
-    //       待后续重构时提取为共享函数（当前不动以避免引入风险）
-    if (isRestock || isFirstCheck || needsPriceFix) {
-      if (isFirstCheck && !isRestock) {
-        console.log(`📋 [FIRST CHECK] ${product.name} — 首次检测，抓取真实价格...`);
-      }
-      let livePrice = null;
-      let liveCycles = null;
-      const oldPrice = product.price;
-      try {
-        const browser = await getBrowser();
-        const pricePage = await browser.newPage();
-        try {
-          await pricePage.goto(product.checkUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          
-          let pUrlObj;
-          try { pUrlObj = new URL(pricePage.url()); } catch(e) {}
-          if (pUrlObj && product.checkUrl.includes('pid=') && !pUrlObj.searchParams.has('pid') && !pUrlObj.searchParams.has('id') && !pUrlObj.searchParams.has('i')) {
-             throw new Error('价格抓取遭重定向拦截');
-          }
-
-          await Promise.race([
-            pricePage.waitForFunction(() => (document.body?.innerText?.trim()?.length || 0) > 200, { timeout: 4000 }),
-            sleep(4000),
-          ]).catch(() => {});
-          const priceInfo = await pricePage.evaluate(() => {
-            const result = { price: null, billingCycles: null };
-            const text = document.body.innerText;
-            const cycleKeyMap = {
-              'monthly': 'monthly', 'quarterly': 'quarterly',
-              'semi-annually': 'semiAnnually', 'semi-annual': 'semiAnnually',
-              'annually': 'annually', 'annual': 'annually',
-              'biennially': 'biennially', 'trienn': 'triennially',
-            };
-            const cycleDisplayMap = {
-              'monthly': '月', 'quarterly': '季', 'semi-annually': '半年',
-              'annually': '年', 'biennially': '两年', 'triennially': '三年',
-            };
-            // 优先级 1：WHMCS 下拉框
-            const billingSelect = document.querySelector('select[name="billingcycle"]');
-            if (billingSelect && billingSelect.options.length > 0) {
-              const cycles = {};
-              let defaultPrice = null, defaultDisplay = null;
-              Array.from(billingSelect.options).forEach((opt, idx) => {
-                const t = opt.textContent.trim();
-                const pm = t.match(/\$(\d+[.,]\d{2})/);
-                if (!pm) return;
-                const priceStr = '$' + pm[1];
-                for (const [key, cKey] of Object.entries(cycleKeyMap)) {
-                  if (t.toLowerCase().includes(key)) {
-                    cycles[cKey] = priceStr;
-                    if (idx === billingSelect.selectedIndex) {
-                      defaultPrice = priceStr;
-                      for (const [dk, dv] of Object.entries(cycleDisplayMap)) {
-                        if (t.toLowerCase().includes(dk)) { defaultDisplay = dv; break; }
-                      }
-                    }
-                    break;
-                  }
-                }
-              });
-              if (Object.keys(cycles).length > 0) {
-                result.billingCycles = cycles;
-                result.price = defaultPrice ? (defaultPrice + (defaultDisplay ? '/' + defaultDisplay : '')) : null;
-                return result;
-              }
-            }
-            // 优先级 2：正则匹配
-            const strictPatterns = [
-              { re: /\$(\d+[.,]\d{2})\s*\/\s*yr/i, p: '年' },
-              { re: /\$(\d+[.,]\d{2})\s*\/\s*mo/i, p: '月' },
-              { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Monthly/i, p: '月' },
-              { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Annually/i, p: '年' },
-              { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Quarterly/i, p: '季' },
-              { re: /\$(\d+[.,]\d{2})\s*(?:USD)?\s*\/?\s*Semi-?Annually/i, p: '半年' },
-              { re: /Annually.{0,50}\$(\d+[.,]\d{2})/i, p: '年' },
-              { re: /Monthly.{0,50}\$(\d+[.,]\d{2})/i, p: '月' },
-            ];
-            for (const { re, p } of strictPatterns) {
-              const m = text.match(re);
-              if (m) { result.price = '$' + m[1] + '/' + p; return result; }
-            }
-            return result;
-          });
-          if (priceInfo?.price) { livePrice = priceInfo.price; liveCycles = priceInfo.billingCycles; }
-        } finally {
-          await pricePage.close();
-        }
-      } catch (e) {
-        console.log(`[Scraper] 价格实时抓取失败: ${e.message}`);
-      }
-
-      let priceChanged = false;
-      if (livePrice && livePrice !== oldPrice) {
-        priceChanged = true;
-        console.log(`💰 [PRICE UPDATE] ${product.name}: ${oldPrice} → ${livePrice}`);
-        const updateData = { price: livePrice };
-        if (liveCycles && Object.keys(liveCycles).length > 0) updateData.billingCycles = liveCycles;
-        db.updateProduct(product.id, updateData);
-        db.recordPriceChange(product.id, oldPrice, livePrice);
-        stockState[product.id].price = livePrice;
-        const catIdx = catalog.findIndex(c => c.id === product.id);
-        if (catIdx !== -1) catalog[catIdx].price = livePrice;
-      } else if (liveCycles && Object.keys(liveCycles).length > 0) {
-        db.updateProduct(product.id, { billingCycles: liveCycles });
-      }
-
-      if (isRestock) {
-        restockedProducts.push({
-          ...stockState[product.id],
-          inStock: true,
-          priceChanged,
-          oldPrice: priceChanged ? oldPrice : null,
-          livePrice: livePrice || oldPrice,
-        });
-      }
+      // 直接使用数据库中已有的价格信息推送补货通知（价格通过管理后台手动维护）
+      restockedProducts.push({
+        ...stockState[product.id],
+        inStock: true,
+      });
     }
   } else {
     stockState[product.id].lastChecked = new Date().toISOString();

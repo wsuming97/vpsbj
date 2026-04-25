@@ -3,8 +3,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import eventBus from './eventBus.js';
 import db from './db.js';
-import { startDiscoveryEngine, runDiscovery } from './discovery.js';
-import { setDiscoveryRunning } from './scraper.js';
 import { matchProvider } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +33,6 @@ export function initBot() {
       { command: 'status',   description: '⚙️ 系统运行状态' },
       { command: 'site',     description: '🌐 获取网页面板地址' },
       { command: 'add',      description: '➕ 添加新品监控' },
-      { command: 'discover', description: '🔍 全网扫描挖掘新品' },
       { command: 'list',     description: '📋 查看全部监控清单' },
     ]).then(() => console.log('✅ Bot 命令菜单已注册'))
       .catch(e => console.warn('⚠️ 注册命令菜单失败:', e.message));
@@ -61,7 +58,6 @@ export function initBot() {
         '👉 /stock - 查看当前有货产品\n' +
         '👉 /stats - 各商家库存统计概览\n' +
         '👉 /add <链接> [名称] - 快捷添加新品监控\n' +
-        '👉 /discover - 立即全网扫描挖掘新品\n' +
         '👉 /status - 系统运行状态\n' +
         '👉 /site - 获取网页面板地址\n\n' +
         '🔧 管理指令：\n' +
@@ -246,7 +242,7 @@ export function initBot() {
         `❌ 当前缺货：${activeCount - inStockCount - errorCount} 款\n` +
         (errorCount > 0 ? `⚠️ 探测异常：${errorCount} 款\n` : '') +
         `🔄 抓取引擎：正常运行中 ✅\n` +
-        `🔁 轮询间隔：每 5 分钟`,
+        `🔁 轮询间隔：每 1 分钟（HTTP 重定向检测）`,
         { parse_mode: 'Markdown' }
       );
     });
@@ -350,33 +346,7 @@ export function initBot() {
       }
     });
 
-    // /discover 手动触发一次全量扫描
-    bot.onText(/^\/discover/, async (msg) => {
-      if (!requireAdmin(msg)) return;
-      bot.sendMessage(msg.chat.id, '🔍 收到指令，正在启动产品发现引擎（需 Puppeteer 逐页扫描，预计 3-5 分钟）...');
-      setDiscoveryRunning(true);
-      try {
-        const count = await runDiscovery(bot, msg.chat.id, catalog, reloadCatalog);
-        if (count === 0) bot.sendMessage(msg.chat.id, '✅ 扫描完毕，所有商家官方页面及竞品站均未发现新品。');
-      } finally {
-        setDiscoveryRunning(false);
-      }
-    });
-
-    // 启动后台自动发现引擎（每 4 小时自动跑一轮）
-    const adminId = process.env.TG_ADMIN_ID || null;
-    // 包裹 discovery，使其运行时屏蔽 scraper 以节省 CPU
-    const guardedDiscovery = async (...args) => {
-      setDiscoveryRunning(true);
-      try { return await runDiscovery(...args); }
-      finally { setDiscoveryRunning(false); }
-    };
-    // ⚠️ 自动发现引擎已关闭 — 产品抓取质量差（抓到页面标题当产品名），
-    //    专注于已有产品的库存监控和补货推送。如需手动扫描仍可用 /discover 命令。
-    // startDiscoveryEngine(bot, adminId, catalog, reloadCatalog, 4, guardedDiscovery);
-    console.log('[TgBot] 🚫 自动发现引擎已关闭，仅保留 /discover 手动触发');
-
-    // 订阅 EventBus 的补货通知
+    // ── 订阅 EventBus 的补货通知 ──
     eventBus.on('restock', (products) => {
       notifyStockChange(products, token, channelId, bot);
     });
