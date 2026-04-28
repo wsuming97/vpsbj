@@ -41,8 +41,8 @@ const CONFIG = {
     },
   ],
 
-  // 轮询间隔（毫秒）— 每 2 分钟检查一次
-  checkInterval: 2 * 60 * 1000,
+  // 轮询间隔（毫秒）— 每 3 秒检查一次（FlareSolverr 实际耗时 10-30s，防重叠保护）
+  checkInterval: 3 * 1000,
 
   // FlareSolverr 请求超时（毫秒）
   solverTimeout: 60000,
@@ -399,23 +399,26 @@ export function startLetMonitor(bot, channelId) {
     }
   };
 
-  // 首次检查（延迟 30 秒，等 FlareSolverr 启动）
-  console.log(`[LET] 🚀 LET 闪购监控已启动，每 ${CONFIG.checkInterval / 1000} 秒检查一次`);
-  console.log(`[LET] 📡 FlareSolverr: ${CONFIG.flareSolverrUrl}`);
-  console.log(`[LET] 🎯 监控目标: ${CONFIG.targets.map(t => t.label).join(', ')}`);
+  // 防重叠保护：FlareSolverr 单次请求需 10-30 秒，避免请求堆积
+  let isChecking = false;
 
-  setTimeout(async () => {
-    for (const target of CONFIG.targets) {
-      await checkTarget(target, onNewDeal);
+  const runCheck = async () => {
+    if (isChecking) return; // 上一轮还没跑完，跳过
+    isChecking = true;
+    try {
+      for (const target of CONFIG.targets) {
+        await checkTarget(target, onNewDeal);
+      }
+    } finally {
+      isChecking = false;
     }
-  }, 30 * 1000);
+  };
+
+  // 首次检查（延迟 10 秒，等 FlareSolverr 启动）
+  setTimeout(runCheck, 10 * 1000);
 
   // 定时循环
-  setInterval(async () => {
-    for (const target of CONFIG.targets) {
-      await checkTarget(target, onNewDeal);
-    }
-  }, CONFIG.checkInterval);
+  setInterval(runCheck, CONFIG.checkInterval);
 }
 
 /**
