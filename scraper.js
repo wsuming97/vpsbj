@@ -73,6 +73,61 @@ export function reloadCatalog() {
 // Sleep function to avoid hitting rate limits
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ── FlareSolverr Fallback（绕过 Cloudflare 403 拦截） ──
+const FLARESOLVERR_URL = process.env.FLARESOLVERR_URL || 'http://flaresolverr:8191/v1';
+
+// 缓存 CF cookies：domain → { cookies, userAgent, expiry }
+const cfCookieCache = new Map();
+const CF_COOKIE_TTL = 20 * 60 * 1000; // CF cookies 有效期约 20 分钟
+
+/**
+ * 通过 FlareSolverr 获取页面内容（绕过 Cloudflare）
+ * 同时缓存获取到的 CF cookies，供后续直接 HTTP 请求复用
+ */
+async function fetchViaFlareSolverr(url) {
+  try {
+    const res = await fetch(FLARESOLVERR_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: 'request.get', url, maxTimeout: 30000 }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== 'ok' || !data.solution) return null;
+
+    // 缓存 CF cookies 供后续直接 HTTP 复用
+    const domain = getDomain(url);
+    const cookies = (data.solution.cookies || [])
+      .map(c => `${c.name}=${c.value}`).join('; ');
+    if (cookies) {
+      cfCookieCache.set(domain, {
+        cookies,
+        userAgent: data.solution.userAgent || '',
+        expiry: Date.now() + CF_COOKIE_TTL,
+      });
+    }
+
+    const html = data.solution.response || '';
+    return html;
+  } catch (err) {
+    console.warn(`[Scraper] FlareSolverr fallback 失败: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * 获取缓存的 CF cookies（如果有效）
+ */
+function getCachedCfHeaders(domain) {
+  const cached = cfCookieCache.get(domain);
+  if (!cached || Date.now() > cached.expiry) return null;
+  return {
+    'Cookie': cached.cookies,
+    'User-Agent': cached.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  };
+}
+
+
 
 /**
  * 纯 HTTP 重定向检测库存（借鉴 vpsjk.de 方案）
@@ -83,7 +138,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * 
  * 优势：<1 秒/次，无需浏览器，不触发 Cloudflare，零内存占用
  */
-async function followRedirects(url, maxHops = 8) {
+async function followRedirects(url, maxHops = 8, extraHeaders = {}) {
   let currentUrl = url;
   for (let i = 0; i < maxHops; i++) {
     const controller = new AbortController();
@@ -96,6 +151,7 @@ async function followRedirects(url, maxHops = 8) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
+          ...extraHeaders,  // 注入缓存的 CF cookies
         },
       });
       clearTimeout(timeout);
@@ -140,8 +196,24 @@ export async function checkProductStock(product) {
     if (wait > 0) await sleep(wait);
     domainLastCheck.set(domain, Date.now());
 
-    // ── 纯 HTTP 重定向检测 ──
-    const { finalUrl, statusCode, bodySnippet } = await followRedirects(product.checkUrl);
+    // ── 第一步：尝试直接 HTTP（如有缓存 CF cookies 则注入） ──
+    const cachedHeaders = getCachedCfHeaders(domain) || {};
+    let { finalUrl, statusCode, bodySnippet } = await followRedirects(product.checkUrl, 8, cachedHeaders);
+
+    // ── 第二步：如果 403/503（CF 拦截），用 FlareSolverr 降级 ──
+    if (statusCode === 403 || statusCode === 503) {
+      console.log(`[Scraper] ${product.id}: HTTP ${statusCode}, 尝试 FlareSolverr fallback...`);
+      const html = await fetchViaFlareSolverr(product.checkUrl);
+      if (html) {
+        bodySnippet = html.substring(0, 15000).toLowerCase();
+        finalUrl = product.checkUrl; // FlareSolverr 返回的是最终页面
+        statusCode = 200;
+        console.log(`[Scraper] ${product.id}: FlareSolverr 成功`);
+      } else {
+        // FlareSolverr 也失败 → 检测失败，不改变状态
+        return { success: false, inStock: false, error: `HTTP ${statusCode} + FlareSolverr 均失败` };
+      }
+    }
 
     let finalUrlObj;
     try { finalUrlObj = new URL(finalUrl); } catch {}
@@ -151,15 +223,9 @@ export async function checkProductStock(product) {
         !finalUrlObj.searchParams.has('pid') &&
         !finalUrlObj.searchParams.has('id') &&
         !finalUrlObj.searchParams.has('i')) {
-      // 但是 confproduct 页面有 i= 参数，属于有货，不拦截
       if (!finalUrl.includes('confproduct') && !finalUrl.includes('configureproduct')) {
         return { success: true, inStock: false };
       }
-    }
-
-    // 🛡️ 防线 2：Cloudflare / WAF 拦截 → 视为检测失败，不改变库存状态
-    if (statusCode === 403 || statusCode === 503) {
-      return { success: false, inStock: false, error: `HTTP ${statusCode} (CF/WAF 拦截)` };
     }
 
     // 统一的缺货关键词检测（产品自带 + 通用内置）
