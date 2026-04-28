@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  vps-tracker:
+    build: .
+    container_name: vps-tracker
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    # 限制容器日志大小，防止磁盘膨胀
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # FlareSolverr 内部地址（Docker 网络自动解析服务名）
+      - FLARESOLVERR_URL=http://flaresolverr:8191/v1
+    depends_on:
+      - flaresolverr
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/api/vps/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      # SQLite 数据库持久化（核心数据）
+      - ./data:/app/data
+      - ./public:/app/public
+
+  # FlareSolverr — 绕过 Cloudflare 的代理服务
+  # LET 闪购监控通过它获取受 CF 保护的页面 HTML
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Asia/Shanghai
+
