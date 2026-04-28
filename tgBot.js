@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import eventBus from './eventBus.js';
 import db from './db.js';
 import { matchProvider } from './constants.js';
+import { startLetMonitor, manualLetCheck } from './let-monitor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +34,7 @@ export function initBot() {
       { command: 'status',   description: '⚙️ 系统运行状态' },
       { command: 'site',     description: '🌐 获取网页面板地址' },
       { command: 'add',      description: '➕ 添加新品监控' },
+      { command: 'let',      description: '🔥 手动检查 LET 闪购' },
       { command: 'list',     description: '📋 查看全部监控清单' },
     ]).then(() => console.log('✅ Bot 命令菜单已注册'))
       .catch(e => console.warn('⚠️ 注册命令菜单失败:', e.message));
@@ -346,10 +348,20 @@ export function initBot() {
       }
     });
 
+    // /let — 手动触发 LET 闪购检查
+    bot.onText(/^\/let/, async (msg) => {
+      if (!requireAdmin(msg)) return;
+      bot.sendMessage(msg.chat.id, '🔍 正在通过 FlareSolverr 检查 LET 闪购...');
+      await manualLetCheck(bot, msg.chat.id);
+    });
+
     // ── 订阅 EventBus 的补货通知 ──
     eventBus.on('restock', (products) => {
       notifyStockChange(products, token, channelId, bot);
     });
+
+    // ── 启动 LET 闪购自动监控 ──
+    startLetMonitor(bot, channelId);
 
   }).catch(err => {
     console.error('⚠️ 初始化 Bot 时加载 catalog 失败:', err);
