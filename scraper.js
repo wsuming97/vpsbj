@@ -106,7 +106,7 @@ async function followRedirects(url, maxHops = 8) {
         let bodySnippet = '';
         try {
           const text = await res.text();
-          bodySnippet = text.substring(0, 5000).toLowerCase();
+          bodySnippet = text.substring(0, 15000).toLowerCase();
         } catch {}
         return { finalUrl: currentUrl, statusCode: res.status, bodySnippet };
       }
@@ -162,40 +162,17 @@ export async function checkProductStock(product) {
       return { success: false, inStock: false, error: `HTTP ${statusCode} (CF/WAF 拦截)` };
     }
 
-    // 统一的缺货关键词检测函数（产品自带 + 通用内置）
+    // 统一的缺货关键词检测（产品自带 + 通用内置）
     const BUILTIN_OOS_KEYWORDS = ['out of stock', 'sold out', 'currently unavailable', 'no longer available', 'product is currently out of stock'];
     const allOosKeywords = [...(product.outOfStockKeywords || []).map(k => k.toLowerCase()), ...BUILTIN_OOS_KEYWORDS];
     const hasOosKeyword = allOosKeywords.some(kw => bodySnippet.includes(kw));
 
-    // 有货的正面信号关键词（WHMCS 通用特征）
-    const hasInStockSignal = /add to cart|order now|configure server|choose billing|billingcycle|configoption|addtocart/i.test(bodySnippet);
-
-    // 🎯 核心判断：最终 URL 特征 + body 关键词联合判定
-    let inStock;
-
-    // 场景 1：到达产品配置页 confproduct → 大概率有货，但仍检查 body
-    if (finalUrl.includes('confproduct') || finalUrl.includes('configureproduct')) {
-      inStock = !hasOosKeyword; // confproduct 页面有 "Out of Stock" 则缺货
-    }
-    // 场景 2：停留在 cart.php?a=add → 检查 body 判断
-    else if (finalUrl.includes('cart.php') && (finalUrl.includes('a=add') || finalUrl.includes('a=confproduct'))) {
-      inStock = !hasOosKeyword && hasInStockSignal;
-    }
-    // 场景 3：被重定向到 store 页面（RackNerd 等） → 跟踪到终点检查 body
-    else if (finalUrl.includes('/store/') || finalUrl.includes('index.php?rp=')) {
-      inStock = !hasOosKeyword && hasInStockSignal;
-    }
-    // 场景 4：未知 URL 模式 → 保守策略：必须有正面信号且无缺货词才算有货
-    else {
-      if (hasOosKeyword) {
-        inStock = false;
-      } else if (hasInStockSignal) {
-        inStock = true;
-      } else {
-        // 无任何信号 → 保守判定为缺货（避免误报）
-        inStock = false;
-      }
-    }
+    // 🎯 核心判断逻辑：
+    //   1. confproduct/configureproduct URL → 有货（WHMCS 标准行为），除非 body 显式含 OOS
+    //   2. 其他所有 URL → 检查 body 是否含 OOS 关键词
+    //   3. 有 OOS 关键词 → 缺货；无 OOS 关键词 → 有货
+    //   4. 403/503 → 已在上方拦截为 failed check
+    let inStock = !hasOosKeyword;
 
     // 需要邀请码且无优惠码 → 等同缺货
     if (inStock && !product.promoCode && /invite\s*code\s*required|invitation\s*only|invite[\s-]*only/i.test(bodySnippet)) {
