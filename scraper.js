@@ -157,29 +157,43 @@ export async function checkProductStock(product) {
       }
     }
 
-    // 🎯 核心判断：最终 URL 特征判定有货/无货
+    // 🛡️ 防线 2：Cloudflare / WAF 拦截 → 视为检测失败，不改变库存状态
+    if (statusCode === 403 || statusCode === 503) {
+      return { success: false, inStock: false, error: `HTTP ${statusCode} (CF/WAF 拦截)` };
+    }
+
+    // 统一的缺货关键词检测函数（产品自带 + 通用内置）
+    const BUILTIN_OOS_KEYWORDS = ['out of stock', 'sold out', 'currently unavailable', 'no longer available', 'product is currently out of stock'];
+    const allOosKeywords = [...(product.outOfStockKeywords || []).map(k => k.toLowerCase()), ...BUILTIN_OOS_KEYWORDS];
+    const hasOosKeyword = allOosKeywords.some(kw => bodySnippet.includes(kw));
+
+    // 有货的正面信号关键词（WHMCS 通用特征）
+    const hasInStockSignal = /add to cart|order now|configure server|choose billing|billingcycle|configoption|addtocart/i.test(bodySnippet);
+
+    // 🎯 核心判断：最终 URL 特征 + body 关键词联合判定
     let inStock;
 
-    // 有货标志：到达了产品配置页（WHMCS 通用行为）
+    // 场景 1：到达产品配置页 confproduct → 大概率有货，但仍检查 body
     if (finalUrl.includes('confproduct') || finalUrl.includes('configureproduct')) {
-      inStock = true;
+      inStock = !hasOosKeyword; // confproduct 页面有 "Out of Stock" 则缺货
     }
-    // 无货标志：停留在加入购物车页面（未被接受）
-    else if (finalUrl.includes('cart.php?a=add') || finalUrl.includes('a=add')) {
-      // 进一步检查 body 中的缺货关键词确认
-      const hasOosKeyword = (product.outOfStockKeywords || []).some(kw =>
-        bodySnippet.includes(kw.toLowerCase())
-      );
-      inStock = !hasOosKeyword;
+    // 场景 2：停留在 cart.php?a=add → 检查 body 判断
+    else if (finalUrl.includes('cart.php') && (finalUrl.includes('a=add') || finalUrl.includes('a=confproduct'))) {
+      inStock = !hasOosKeyword && hasInStockSignal;
     }
-    // 无法从 URL 判断 → 降级到 body 关键词检测
+    // 场景 3：被重定向到 store 页面（RackNerd 等） → 跟踪到终点检查 body
+    else if (finalUrl.includes('/store/') || finalUrl.includes('index.php?rp=')) {
+      inStock = !hasOosKeyword && hasInStockSignal;
+    }
+    // 场景 4：未知 URL 模式 → 保守策略：必须有正面信号且无缺货词才算有货
     else {
-      inStock = true; // 默认有货
-      for (const keyword of (product.outOfStockKeywords || [])) {
-        if (bodySnippet.includes(keyword.toLowerCase())) {
-          inStock = false;
-          break;
-        }
+      if (hasOosKeyword) {
+        inStock = false;
+      } else if (hasInStockSignal) {
+        inStock = true;
+      } else {
+        // 无任何信号 → 保守判定为缺货（避免误报）
+        inStock = false;
       }
     }
 
