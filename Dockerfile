@@ -3,21 +3,10 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Install native dependencies for Puppeteer (Chromium) and better-sqlite3 (编译原生模块)
+# 仅需 better-sqlite3 原生模块编译依赖（已移除 Chromium/Puppeteer）
 RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont \
-      # better-sqlite3 原生模块编译依赖
       build-base \
       python3
-
-# Skip downloading Chromium, use the installed one
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Copy package.json and install dependencies
 COPY package.json package-lock.json* ./
